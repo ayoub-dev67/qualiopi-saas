@@ -293,6 +293,76 @@ function setupSessions_(ss) {
   Logger.log("  Sessions done");
 }
 
+// ─── Financier ──────────────────────────────────────────────────────────────
+
+function setupFinancier_(ss) {
+  Logger.log("=== Setting up Financier ===");
+  var sheet = getOrCreateSheet_(ss, "Financier");
+  var headers = [
+    "facture_id", "session_id", "formation_id", "entreprise", "financeur",
+    "type_financement", "montant_prevu", "montant_facture", "montant_encaisse",
+    "statut_paiement", "date_facture", "date_paiement"
+  ];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  applyHeaderStyle_(sheet, headers.length);
+
+  // A: auto-id FAC-2026-001
+  var formulas = [];
+  for (var i = 0; i < 99; i++) {
+    formulas.push([
+      '=IF(B' + (i + 2) + '="","",CONCATENATE("FAC-",TEXT(YEAR(TODAY()),"0000"),"-",TEXT(ROW()-1,"000")))'
+    ]);
+  }
+  sheet.getRange("A2:A100").setFormulas(formulas);
+  Logger.log("  Facture ID formulas set");
+
+  // B: dropdown from Sessions!A2:A100
+  var ruleB = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(ss.getSheetByName("Sessions").getRange("A2:A100"), true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange("B2:B100").setDataValidation(ruleB);
+
+  // C: dropdown from Formations!A2:A100
+  var ruleC = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(ss.getSheetByName("Formations").getRange("A2:A100"), true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange("C2:C100").setDataValidation(ruleC);
+
+  // F: type_financement dropdown
+  var ruleF = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["opco", "entreprise", "cpf", "personnel", "pole_emploi"], true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange("F2:F100").setDataValidation(ruleF);
+
+  // G-I: montants EUR
+  sheet.getRange("G2:I100").setNumberFormat("#,##0.00 [$EUR]");
+
+  // J: statut_paiement dropdown
+  var ruleJ = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["a_facturer", "facturee", "payee", "relancee", "avoir"], true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange("J2:J100").setDataValidation(ruleJ);
+
+  // K-L: dates
+  sheet.getRange("K2:L100").setNumberFormat("yyyy-MM-dd");
+
+  // Widths: A=130,B=130,C=100,D=200,E=200,F=130,G-I=120,J=110,K-L=120
+  setColWidths_(sheet, [130, 130, 100, 200, 200, 130, 120, 120, 120, 110, 120, 120]);
+
+  // Conditional formatting J: statut_paiement
+  var rangeJ = sheet.getRange("J2:J100");
+  addConditionalBgRule_(sheet, rangeJ, "a_facturer", "#fff3cd");
+  addConditionalBgRule_(sheet, rangeJ, "facturee", "#d4edfc");
+  addConditionalBgRule_(sheet, rangeJ, "payee", "#d4edda");
+  addConditionalBgRule_(sheet, rangeJ, "relancee", "#f8d7da");
+  addConditionalBgRule_(sheet, rangeJ, "avoir", "#e2e3e5");
+  Logger.log("  Financier done");
+}
+
 // ─── Config ─────────────────────────────────────────────────────────────────
 
 function setupConfig_(ss) {
@@ -360,11 +430,13 @@ function setupReferentiel() {
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Create sheets in order (Formations & Formateurs before Sessions for refs)
+  // Create sheets in order (Formations & Formateurs before Sessions for refs,
+  // Sessions before Financier for dropdown ref)
   setupOrganisme_(ss);
   setupFormations_(ss);
   setupFormateurs_(ss);
   setupSessions_(ss);
+  setupFinancier_(ss);
   setupConfig_(ss);
 
   // Remove default sheets
