@@ -1,0 +1,663 @@
+{
+  "name": "Qualiopi — WF2 Émargement (CRON)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/10 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-emargement",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notes": "Déclencheur : toutes les 10 minutes. Cherche les sessions en cours dont l'émargement n'a pas encore été traité (workflow_2_ok = FALSE)."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "statut",
+              "lookupValue": "en_cours"
+            },
+            {
+              "lookupColumn": "workflow_2_ok",
+              "lookupValue": "FALSE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-sessions",
+      "name": "Lire Sessions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [480, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les sessions avec statut=en_cours et workflow_2_ok=FALSE depuis l'onglet Sessions du classeur 01_Referentiel."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "cond-not-empty",
+              "leftValue": "={{ $json.session_id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-sessions",
+      "name": "Filtrer",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "notes": "Vérifie que des résultats non vides ont été retournés. Seules les sessions avec un session_id valide passent."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inscriptions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-inscrits",
+      "name": "Lire Inscrits",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [960, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les inscriptions de la session courante depuis l'onglet Inscriptions du classeur 02_Suivi_Apprenants. Filtre par session_id."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Formations",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "formation_id",
+              "lookupValue": "={{ $('Filtrer').item.json.formation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-formation",
+      "name": "Lire Formation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1200, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lookup de la formation associée à la session via formation_id dans l'onglet Formations du classeur 01_Referentiel."
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "loop-inscrits",
+      "name": "Boucle Inscrits",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1440, 300],
+      "notes": "Itère sur chaque inscrit de la session. Traite un inscrit à la fois : construction URL émargement, envoi email, log. Reboucle jusqu'à épuisement."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Construire l'URL pré-remplie du Google Form Émargement\n// ============================================================\n\nconst inscrit = $json;\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\n\nconst formId = '1juZyWTwTTHYSNsq8fChTopbs0XPbtHHC1rNrq_jfnUQ';\nconst dateJour = new Date().toLocaleDateString('fr-FR');\n\nconst baseUrl = `https://docs.google.com/forms/d/e/${formId}/viewform`;\nconst params = new URLSearchParams({\n  'entry.inscription_id': inscrit.inscription_id || '',\n  'entry.session_id': session.session_id || '',\n  'entry.apprenant_nom': inscrit.nom || '',\n  'entry.apprenant_prenom': inscrit.prenom || '',\n  'entry.date_jour': dateJour\n});\n\nconst url = `${baseUrl}?${params.toString()}`;\n\nreturn [{\n  json: {\n    ...inscrit,\n    url_emargement: url,\n    session_id: session.session_id,\n    formation_intitule: formation.intitule || '',\n    date_debut: session.date_debut || '',\n    date_fin: session.date_fin || '',\n    date_jour: dateJour\n  }\n}];"
+      },
+      "id": "build-url-emargement",
+      "name": "Construire URL Émargement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 300],
+      "notes": "Construit l'URL pré-remplie du Google Form d'émargement avec inscription_id, session_id, nom, prénom et date du jour en query params."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Émargement — {{ $json.formation_intitule }} — {{ $json.date_jour }}",
+        "emailType": "html",
+        "message": "=<h2 style=\"color:#1a365d;\">Feuille d'émargement</h2><p>Bonjour {{ $json.prenom }},</p><p>Merci de confirmer votre présence à la formation <strong>{{ $json.formation_intitule }}</strong> en complétant l'émargement du jour.</p><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:24px auto;\"><tr><td style=\"background-color:#1a365d;border-radius:6px;\"><a href=\"{{ $json.url_emargement }}\" target=\"_blank\" style=\"display:inline-block;padding:14px 32px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;\">Émarger maintenant</a></td></tr></table><p style=\"font-size:13px;color:#666;\">Si le bouton ne fonctionne pas, copiez ce lien :<br/><a href=\"{{ $json.url_emargement }}\">{{ $json.url_emargement }}</a></p><p>Cordialement,<br/>L'équipe pédagogique</p><p style=\"font-size:12px;color:#999;\">Email généré automatiquement — Système Qualiopi</p>",
+        "options": {}
+      },
+      "id": "send-emargement",
+      "name": "Envoyer lien émargement",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1920, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Envoie un email à l'inscrit avec le lien vers le Google Form d'émargement pré-rempli. Bouton CTA + lien texte de secours."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Questionnaires_Envoyes",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "inscription_id",
+              "fieldValue": "={{ $('Construire URL Émargement').item.json.inscription_id }}"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": "={{ $('Construire URL Émargement').item.json.session_id }}"
+            },
+            {
+              "column": "type",
+              "fieldValue": "emargement"
+            },
+            {
+              "column": "date_envoi",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "column": "statut",
+              "fieldValue": "envoye"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-envoi",
+      "name": "Log envoi",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2160, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Questionnaires_Envoyes du classeur 02_Suivi_Apprenants : inscription_id, session_id, type=emargement, date_envoi, statut=envoye."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Emargement",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $('Filtrer').item.json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-emargements",
+      "name": "Lire Émargements",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2400, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les enregistrements d'émargement de la session depuis l'onglet Emargement du classeur 02_Suivi_Apprenants. Filtre par session_id."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Préparer le HTML de la feuille d'émargement PDF\n// ============================================================\n// Lit le template templates/template_emargement.html depuis le\n// filesystem n8n et remplace les placeholders {{variable}}.\n// Construit dynamiquement les lignes {{rows_emargement}}.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_emargement.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\nconst emargements = $input.all().map(item => item.json);\n\n// Construire les lignes du tableau d'émargement\nconst rowsHtml = emargements.map(e => {\n  const statut = e.present === 'TRUE' || e.present === true\n    ? '<span style=\"color:#38a169;font-weight:bold;\">Présent</span>'\n    : '<span style=\"color:#e53e3e;font-weight:bold;\">Absent</span>';\n  return `<tr>\n    <td style=\"padding:8px 12px;border:1px solid #e2e8f0;\">${e.nom || ''}</td>\n    <td style=\"padding:8px 12px;border:1px solid #e2e8f0;\">${e.prenom || ''}</td>\n    <td style=\"padding:8px 12px;border:1px solid #e2e8f0;\">${e.date || ''}</td>\n    <td style=\"padding:8px 12px;border:1px solid #e2e8f0;\">${e.heure_arrivee || ''}</td>\n    <td style=\"padding:8px 12px;border:1px solid #e2e8f0;\">${e.heure_depart || ''}</td>\n    <td style=\"padding:8px 12px;border:1px solid #e2e8f0;text-align:center;\">${statut}</td>\n    <td style=\"padding:8px 12px;border:1px solid #e2e8f0;\">${e.signature || ''}</td>\n  </tr>`;\n}).join('');\n\nconst replacements = {\n  'formation_intitule': formation.intitule || '',\n  'session_id': session.session_id || '',\n  'date_debut': session.date_debut || '',\n  'date_fin': session.date_fin || '',\n  'lieu': session.lieu || '',\n  'rows_emargement': rowsHtml,\n  'date_generation': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{\n  json: {\n    html_emargement: html,\n    nom_fichier: `Emargement_${session.session_id}.pdf`,\n    session_id: session.session_id\n  }\n}];"
+      },
+      "id": "prepare-emargement-pdf",
+      "name": "Préparer Émargement PDF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 300],
+      "notes": "Lit le fichier template templates/template_emargement.html depuis le filesystem n8n. Construit dynamiquement les lignes {{rows_emargement}} avec les données de présence. N'embarque PAS le template."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://gotenberg:3000/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formData",
+              "name": "files",
+              "value": "={{ $json.html_emargement }}",
+              "inputDataFieldName": "index.html"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperWidth",
+              "value": "11.69"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperHeight",
+              "value": "8.27"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginTop",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginBottom",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginLeft",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginRight",
+              "value": "0.4"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "generate-emargement-pdf",
+      "name": "Générer Émargement PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, 300],
+      "notes": "Envoie le HTML de la feuille d'émargement à Gotenberg pour conversion en PDF paysage (A4 landscape). Retourne le fichier binaire PDF."
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Préparer Émargement PDF').item.json.nom_fichier }}",
+        "driveId": {
+          "__rl": true,
+          "value": "default",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Créer sous-dossiers').item.json.folder_02_emargement_id || '' }}",
+          "mode": "id"
+        },
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "upload-emargement",
+      "name": "Upload Émargement",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [3120, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      },
+      "notes": "Upload le PDF de la feuille d'émargement dans le sous-dossier 02_Emargement du dossier session sur Google Drive."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $('Filtrer').item.json.session_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "workflow_2_ok",
+              "fieldValue": "TRUE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mark-workflow-ok",
+      "name": "Marquer workflow_2_ok",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [3360, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Met à jour la colonne workflow_2_ok = TRUE dans l'onglet Sessions du classeur 01_Referentiel. Empêche le CRON de retraiter cette session."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Journal_Systeme",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "date",
+              "fieldValue": "={{ new Date().toLocaleDateString('fr-FR') }}"
+            },
+            {
+              "column": "heure",
+              "fieldValue": "={{ new Date().toLocaleTimeString('fr-FR') }}"
+            },
+            {
+              "column": "workflow",
+              "fieldValue": "W2"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": "={{ $('Filtrer').item.json.session_id }}"
+            },
+            {
+              "column": "statut",
+              "fieldValue": "OK"
+            },
+            {
+              "column": "details",
+              "fieldValue": "=Émargement envoyé aux inscrits, feuille PDF générée et archivée dans Drive"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-journal",
+      "name": "Log Journal",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [3600, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Journal_Systeme du classeur 03_Qualite_KPIs : date, heure, workflow W2, session_id, statut OK."
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lire Sessions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Sessions": {
+      "main": [
+        [
+          {
+            "node": "Filtrer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrer": {
+      "main": [
+        [
+          {
+            "node": "Lire Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Inscrits": {
+      "main": [
+        [
+          {
+            "node": "Lire Formation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Formation": {
+      "main": [
+        [
+          {
+            "node": "Boucle Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boucle Inscrits": {
+      "main": [
+        [
+          {
+            "node": "Construire URL Émargement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lire Émargements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire URL Émargement": {
+      "main": [
+        [
+          {
+            "node": "Envoyer lien émargement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer lien émargement": {
+      "main": [
+        [
+          {
+            "node": "Log envoi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log envoi": {
+      "main": [
+        [
+          {
+            "node": "Boucle Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Émargements": {
+      "main": [
+        [
+          {
+            "node": "Préparer Émargement PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Émargement PDF": {
+      "main": [
+        [
+          {
+            "node": "Générer Émargement PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Générer Émargement PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload Émargement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Émargement": {
+      "main": [
+        [
+          {
+            "node": "Marquer workflow_2_ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marquer workflow_2_ok": {
+      "main": [
+        [
+          {
+            "node": "Log Journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [{ "name": "Qualiopi", "id": "qualiopi-tag" }],
+  "triggerCount": 1,
+  "pinData": {}
+}
