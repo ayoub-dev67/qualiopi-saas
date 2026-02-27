@@ -1,0 +1,486 @@
+{
+  "name": "Qualiopi — WF1 Envoi Positionnement (CRON)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-positionnement",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notes": "Déclencheur : toutes les 5 minutes. Cherche les sessions planifiées dont le WF0 est terminé mais le WF1 pas encore exécuté."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "statut",
+              "lookupValue": "planifiee"
+            },
+            {
+              "lookupColumn": "workflow_1_ok",
+              "lookupValue": "FALSE"
+            },
+            {
+              "lookupColumn": "workflow_0_ok",
+              "lookupValue": "TRUE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-sessions",
+      "name": "Lire Sessions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [480, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les sessions avec statut=planifiee, workflow_0_ok=TRUE et workflow_1_ok=FALSE depuis l'onglet Sessions du classeur 01_Referentiel."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "cond-not-empty",
+              "leftValue": "={{ $json.session_id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-sessions",
+      "name": "Filtrer",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "notes": "Vérifie que des résultats non vides ont été retournés. Seules les sessions avec un session_id valide passent."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inscriptions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-inscrits",
+      "name": "Lire Inscrits",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [960, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les inscriptions de la session courante depuis l'onglet Inscriptions du classeur 02_Suivi_Apprenants. Filtre par session_id."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Formations",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "formation_id",
+              "lookupValue": "={{ $('Filtrer').item.json.formation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-formation",
+      "name": "Lire Formation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1200, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lookup de la formation associée à la session via formation_id dans l'onglet Formations du classeur 01_Referentiel."
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "loop-inscrits",
+      "name": "Boucle Inscrits",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1440, 300],
+      "notes": "Itère sur chaque inscrit de la session. Traite un inscrit à la fois : construction URL, envoi email, log. Reboucle jusqu'à épuisement de la liste."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Construire l'URL pré-remplie du Google Form Positionnement\n// ============================================================\n// Le Google Form est pré-configuré avec des champs cachés\n// pour inscription_id et session_id, passés en query params.\n// ============================================================\n\nconst inscrit = $json;\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\n\nconst formId = '1Tkf-lm7Kd_6EaN7-MXja1zAhAKxqH-j1gOVONl7fUDA';\n\n// Construire l'URL pré-remplie\n// Les entry IDs doivent correspondre aux champs du Google Form\nconst baseUrl = `https://docs.google.com/forms/d/e/${formId}/viewform`;\nconst params = new URLSearchParams({\n  'entry.inscription_id': inscrit.inscription_id || '',\n  'entry.session_id': session.session_id || '',\n  'entry.apprenant_nom': inscrit.nom || '',\n  'entry.apprenant_prenom': inscrit.prenom || ''\n});\n\nconst url = `${baseUrl}?${params.toString()}`;\n\nreturn [{\n  json: {\n    ...inscrit,\n    url_positionnement: url,\n    session_id: session.session_id,\n    formation_intitule: formation.intitule || '',\n    date_debut: session.date_debut || '',\n    date_fin: session.date_fin || ''\n  }\n}];"
+      },
+      "id": "build-url-positionnement",
+      "name": "Construire URL Positionnement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 300],
+      "notes": "Construit l'URL pré-remplie du Google Form de positionnement avec inscription_id, session_id, nom et prénom en query params."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Questionnaire de positionnement — {{ $json.formation_intitule }}",
+        "emailType": "html",
+        "message": "=<h2 style=\"color:#1a365d;\">Questionnaire de positionnement</h2><p>Bonjour {{ $json.prenom }},</p><p>Dans le cadre de votre inscription à la formation <strong>{{ $json.formation_intitule }}</strong> (du {{ $json.date_debut }} au {{ $json.date_fin }}), nous vous invitons à compléter le questionnaire de positionnement ci-dessous.</p><p>Ce questionnaire nous permet d'évaluer votre niveau initial et d'adapter le contenu pédagogique à vos besoins.</p><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:24px auto;\"><tr><td style=\"background-color:#1a365d;border-radius:6px;\"><a href=\"{{ $json.url_positionnement }}\" target=\"_blank\" style=\"display:inline-block;padding:14px 32px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;\">Compléter le questionnaire</a></td></tr></table><p style=\"font-size:13px;color:#666;\">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br/><a href=\"{{ $json.url_positionnement }}\">{{ $json.url_positionnement }}</a></p><p>Merci de le compléter avant le <strong>{{ $json.date_debut }}</strong>.</p><p>Cordialement,<br/>L'équipe pédagogique</p><p style=\"font-size:12px;color:#999;\">Email généré automatiquement — Système Qualiopi</p>",
+        "options": {}
+      },
+      "id": "send-positionnement",
+      "name": "Envoyer lien positionnement",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1920, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Envoie un email à l'inscrit avec le lien vers le Google Form de positionnement pré-rempli. Bouton CTA + lien texte de secours."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Questionnaires_Envoyes",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "inscription_id",
+              "fieldValue": "={{ $('Construire URL Positionnement').item.json.inscription_id }}"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": "={{ $('Construire URL Positionnement').item.json.session_id }}"
+            },
+            {
+              "column": "type",
+              "fieldValue": "positionnement"
+            },
+            {
+              "column": "date_envoi",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "column": "statut",
+              "fieldValue": "envoye"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-envoi",
+      "name": "Log envoi",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2160, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Questionnaires_Envoyes du classeur 02_Suivi_Apprenants : inscription_id, session_id, type=positionnement, date_envoi, statut=envoye."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $('Filtrer').item.json.session_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "workflow_1_ok",
+              "fieldValue": "TRUE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mark-workflow-ok",
+      "name": "Marquer workflow_1_ok",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2400, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Met à jour la colonne workflow_1_ok = TRUE dans l'onglet Sessions du classeur 01_Referentiel pour marquer le positionnement comme envoyé. Empêche le CRON de retraiter cette session."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Journal_Systeme",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "date",
+              "fieldValue": "={{ new Date().toLocaleDateString('fr-FR') }}"
+            },
+            {
+              "column": "heure",
+              "fieldValue": "={{ new Date().toLocaleTimeString('fr-FR') }}"
+            },
+            {
+              "column": "workflow",
+              "fieldValue": "W1"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": "={{ $('Filtrer').item.json.session_id }}"
+            },
+            {
+              "column": "statut",
+              "fieldValue": "OK"
+            },
+            {
+              "column": "details",
+              "fieldValue": "=Questionnaires de positionnement envoyés aux inscrits de la session"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-journal",
+      "name": "Log Journal",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2640, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Journal_Systeme du classeur 03_Qualite_KPIs : date, heure, workflow W1, session_id, statut OK."
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lire Sessions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Sessions": {
+      "main": [
+        [
+          {
+            "node": "Filtrer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrer": {
+      "main": [
+        [
+          {
+            "node": "Lire Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Inscrits": {
+      "main": [
+        [
+          {
+            "node": "Lire Formation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Formation": {
+      "main": [
+        [
+          {
+            "node": "Boucle Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boucle Inscrits": {
+      "main": [
+        [
+          {
+            "node": "Construire URL Positionnement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Marquer workflow_1_ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire URL Positionnement": {
+      "main": [
+        [
+          {
+            "node": "Envoyer lien positionnement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer lien positionnement": {
+      "main": [
+        [
+          {
+            "node": "Log envoi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log envoi": {
+      "main": [
+        [
+          {
+            "node": "Boucle Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marquer workflow_1_ok": {
+      "main": [
+        [
+          {
+            "node": "Log Journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [{ "name": "Qualiopi", "id": "qualiopi-tag" }],
+  "triggerCount": 1,
+  "pinData": {}
+}
