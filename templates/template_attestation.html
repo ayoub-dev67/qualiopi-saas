@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Attestation de fin de formation</title>
+</head>
+<body style="margin:0;padding:40px 50px;font-family:Arial,sans-serif;font-size:12px;color:#333;width:210mm;min-height:297mm;box-sizing:border-box;">
+
+  <!-- En-tête -->
+  <table style="width:100%;margin-bottom:30px;">
+    <tr>
+      <td style="width:80px;vertical-align:top;">
+        <img src="{{logo_url}}" alt="Logo" style="max-width:70px;max-height:70px;">
+      </td>
+      <td style="vertical-align:top;padding-left:15px;">
+        <div style="font-size:16px;font-weight:bold;color:#1a365d;">{{organisme_nom}}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px;">Organisme de formation</div>
+        <div style="font-size:11px;color:#666;">N° de déclaration d'activité : {{organisme_nda}}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Titre -->
+  <div style="text-align:center;margin:40px 0 35px 0;">
+    <div style="font-size:22px;font-weight:bold;color:#1a365d;border:3px solid #1a365d;display:inline-block;padding:12px 40px;border-radius:4px;">ATTESTATION DE FIN DE FORMATION</div>
+  </div>
+
+  <!-- Corps -->
+  <div style="line-height:1.9;font-size:13px;margin-bottom:30px;">
+    <p>L'organisme de formation <strong>{{organisme_nom}}</strong>, déclaré sous le numéro d'activité <strong>{{organisme_nda}}</strong>,</p>
+
+    <p style="margin-top:15px;">atteste que :</p>
+
+    <div style="text-align:center;margin:20px 0;">
+      <span style="font-size:16px;font-weight:bold;color:#1a365d;background:#f7f7f7;padding:10px 30px;border-radius:4px;display:inline-block;">{{apprenant_prenom}} {{apprenant_nom}}</span>
+    </div>
+
+    <p>a suivi la formation :</p>
+
+    <div style="background:#f7f7f7;padding:18px 25px;border-left:4px solid #1a365d;border-radius:0 4px 4px 0;margin:15px 0;">
+      <div style="font-size:15px;font-weight:bold;color:#1a365d;">{{formation_intitule}}</div>
+      <div style="margin-top:8px;font-size:12px;">
+        Du <strong>{{session_date_debut}}</strong> au <strong>{{session_date_fin}}</strong><br>
+        Durée totale : <strong>{{formation_duree_heures}} heures</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Objectifs pédagogiques -->
+  <div style="margin-bottom:25px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:10px;">Objectifs pédagogiques</div>
+    <div style="background:#f7f7f7;padding:15px 20px;border-radius:4px;line-height:1.7;">{{formation_objectifs}}</div>
+  </div>
+
+  <!-- Résultats évaluation -->
+  <div style="margin-bottom:30px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:10px;">Résultats de l'évaluation des acquis</div>
+    <div style="background:#f7f7f7;padding:15px 20px;border-radius:4px;line-height:1.7;">{{resultats_evaluation}}</div>
+  </div>
+
+  <!-- Conclusion -->
+  <div style="line-height:1.9;font-size:13px;margin-bottom:40px;">
+    <p>Fait à <strong>{{organisme_ville}}</strong>, le <strong>{{date_generation}}</strong>.</p>
+    <p style="margin-top:15px;font-style:italic;color:#555;">Délivrée pour servir et valoir ce que de droit.</p>
+  </div>
+
+  <!-- Signature -->
+  <div style="margin-top:20px;">
+    <div style="width:300px;border:1px solid #ddd;padding:20px;border-radius:4px;">
+      <div style="font-weight:bold;color:#1a365d;margin-bottom:8px;">Le responsable de l'organisme</div>
+      <div style="font-size:11px;color:#666;">{{organisme_nom}}</div>
+      <div style="margin-top:40px;font-size:10px;color:#999;">Signature et cachet</div>
+    </div>
+  </div>
+
+  <div style="margin-top:30px;font-size:9px;color:#999;text-align:center;">{{organisme_nom}} — NDA {{organisme_nda}} — Cette attestation ne constitue pas une certification professionnelle au sens de l'article L.6113-1 du Code du travail</div>
+
+</body>
+</html>

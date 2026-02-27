@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>PV de positionnement</title>
+</head>
+<body style="margin:0;padding:40px 50px;font-family:Arial,sans-serif;font-size:12px;color:#333;width:210mm;min-height:297mm;box-sizing:border-box;">
+
+  <!-- En-tête -->
+  <table style="width:100%;margin-bottom:20px;">
+    <tr>
+      <td style="width:80px;vertical-align:top;">
+        <img src="{{logo_url}}" alt="Logo" style="max-width:70px;max-height:70px;">
+      </td>
+      <td style="vertical-align:top;padding-left:15px;">
+        <div style="font-size:16px;font-weight:bold;color:#1a365d;">{{organisme_nom}}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px;">NDA : {{organisme_nda}}</div>
+      </td>
+      <td style="text-align:right;vertical-align:top;">
+        <div style="font-size:10px;color:#999;background:#f7f7f7;padding:4px 10px;border-radius:3px;display:inline-block;">Indicateur 8 — Positionnement</div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="text-align:center;margin-bottom:25px;">
+    <div style="font-size:18px;font-weight:bold;color:#1a365d;">PROCÈS-VERBAL DE POSITIONNEMENT</div>
+  </div>
+
+  <!-- Infos -->
+  <table style="width:100%;margin-bottom:25px;border-collapse:collapse;">
+    <tr>
+      <td style="padding:10px 15px;background:#1a365d;color:#fff;font-weight:bold;border-radius:4px 4px 0 0;" colspan="2">Informations</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 15px;background:#f7f7f7;width:200px;font-weight:bold;border-bottom:1px solid #eee;">Formation</td>
+      <td style="padding:8px 15px;background:#f7f7f7;border-bottom:1px solid #eee;">{{formation_intitule}}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 15px;width:200px;font-weight:bold;border-bottom:1px solid #eee;">Apprenant</td>
+      <td style="padding:8px 15px;border-bottom:1px solid #eee;">{{apprenant_nom}}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 15px;background:#f7f7f7;width:200px;font-weight:bold;">Date du positionnement</td>
+      <td style="padding:8px 15px;background:#f7f7f7;">{{date_positionnement}}</td>
+    </tr>
+  </table>
+
+  <!-- Résultats -->
+  <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:12px;">Résultats du positionnement</div>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:25px;">
+    <tr>
+      <td style="padding:12px 18px;background:#f7f7f7;border-bottom:1px solid #eee;width:200px;font-weight:bold;">Niveau initial</td>
+      <td style="padding:12px 18px;border-bottom:1px solid #eee;">
+        <!-- Badge niveau -->
+        {{#if_debutant}}
+        <span style="background:#ed8936;color:#fff;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:bold;">{{niveau_initial}}</span>
+        {{/if_debutant}}
+        {{#if_intermediaire}}
+        <span style="background:#3182ce;color:#fff;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:bold;">{{niveau_initial}}</span>
+        {{/if_intermediaire}}
+        {{#if_avance}}
+        <span style="background:#38a169;color:#fff;padding:3px 12px;border-radius:12px;font-size:11px;font-weight:bold;">{{niveau_initial}}</span>
+        {{/if_avance}}
+        {{niveau_initial}}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:12px 18px;width:200px;font-weight:bold;border-bottom:1px solid #eee;">Expérience</td>
+      <td style="padding:12px 18px;border-bottom:1px solid #eee;">{{experience}}</td>
+    </tr>
+    <tr>
+      <td style="padding:12px 18px;background:#f7f7f7;width:200px;font-weight:bold;border-bottom:1px solid #eee;">Attentes</td>
+      <td style="padding:12px 18px;background:#f7f7f7;border-bottom:1px solid #eee;">{{attentes}}</td>
+    </tr>
+    <tr>
+      <td style="padding:12px 18px;width:200px;font-weight:bold;">Objectifs personnels</td>
+      <td style="padding:12px 18px;">{{objectifs}}</td>
+    </tr>
+  </table>
+
+  <!-- Bloc handicap -->
+  <div style="background:#ebf8ff;border:2px solid #3182ce;border-radius:6px;padding:15px 20px;margin-bottom:25px;">
+    <div style="font-weight:bold;color:#2b6cb0;margin-bottom:6px;">♿ Besoins spécifiques identifiés</div>
+    <div style="font-size:12px;color:#2c5282;">{{besoins_specifiques}}</div>
+    <div style="font-size:10px;color:#4a90c4;margin-top:6px;">Le référent handicap a été informé. Les aménagements nécessaires seront mis en place.</div>
+  </div>
+
+  <!-- Aménagements prévus -->
+  <div style="margin-bottom:25px;">
+    <div style="font-size:13px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Aménagements pédagogiques prévus</div>
+    <div style="background:#f7f7f7;padding:12px 18px;border-radius:4px;line-height:1.7;">{{amenagements_prevus}}</div>
+  </div>
+
+  <!-- Signatures -->
+  <div style="margin-top:30px;">
+    <table style="width:100%;">
+      <tr>
+        <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:18px;border-radius:4px;">
+          <div style="font-weight:bold;color:#1a365d;margin-bottom:12px;">Le responsable pédagogique</div>
+          <div style="margin-top:35px;font-size:10px;color:#999;">Date et signature</div>
+        </td>
+        <td style="width:4%;"></td>
+        <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:18px;border-radius:4px;">
+          <div style="font-weight:bold;color:#1a365d;margin-bottom:12px;">L'apprenant</div>
+          <div style="font-size:11px;">{{apprenant_nom}}</div>
+          <div style="margin-top:25px;font-size:10px;color:#999;">Date et signature</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="margin-top:20px;font-size:9px;color:#999;text-align:center;">Document généré automatiquement le {{date_generation}} — Indicateur 8 du Référentiel National Qualité</div>
+
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Évaluation des acquis</title>
+</head>
+<body style="margin:0;padding:40px 50px;font-family:Arial,sans-serif;font-size:12px;color:#333;width:210mm;min-height:297mm;box-sizing:border-box;">
+
+  <!-- En-tête -->
+  <table style="width:100%;margin-bottom:20px;">
+    <tr>
+      <td style="width:80px;vertical-align:top;">
+        <img src="{{logo_url}}" alt="Logo" style="max-width:70px;max-height:70px;">
+      </td>
+      <td style="vertical-align:top;padding-left:15px;">
+        <div style="font-size:16px;font-weight:bold;color:#1a365d;">{{organisme_nom}}</div>
+      </td>
+      <td style="text-align:right;vertical-align:top;">
+        <div style="font-size:10px;color:#999;background:#f7f7f7;padding:4px 10px;border-radius:3px;display:inline-block;">Indicateur 11 — Évaluation des acquis</div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="text-align:center;margin-bottom:25px;">
+    <div style="font-size:18px;font-weight:bold;color:#1a365d;">ÉVALUATION DES ACQUIS</div>
+    <div style="font-size:12px;color:#666;margin-top:4px;">Comparaison positionnement initial / évaluation finale</div>
+  </div>
+
+  <!-- Infos -->
+  <div style="background:#f7f7f7;padding:15px 20px;border-radius:4px;margin-bottom:25px;">
+    <table style="width:100%;font-size:12px;">
+      <tr>
+        <td style="padding:3px 0;width:50%;"><strong>Apprenant :</strong> {{apprenant_nom}}</td>
+        <td style="padding:3px 0;"><strong>Formation :</strong> {{formation_intitule}}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 0;"><strong>Date évaluation pré :</strong> {{date_eval_pre}}</td>
+        <td style="padding:3px 0;"><strong>Date évaluation post :</strong> {{date_eval_post}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Tableau comparatif -->
+  <table style="width:100%;border-collapse:collapse;margin-bottom:25px;">
+    <thead>
+      <tr>
+        <th style="background:#1a365d;color:#fff;padding:10px 12px;text-align:left;font-size:11px;border:1px solid #1a365d;">Compétence</th>
+        <th style="background:#1a365d;color:#fff;padding:10px 12px;text-align:center;font-size:11px;width:120px;border:1px solid #1a365d;">Avant (positionnement)</th>
+        <th style="background:#1a365d;color:#fff;padding:10px 12px;text-align:center;font-size:11px;width:120px;border:1px solid #1a365d;">Après (évaluation)</th>
+        <th style="background:#1a365d;color:#fff;padding:10px 12px;text-align:center;font-size:11px;width:80px;border:1px solid #1a365d;">Delta</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{rows_competences}}
+    </tbody>
+  </table>
+
+  <!-- Légende barres -->
+  <div style="font-size:10px;color:#666;margin-bottom:20px;">
+    Barres de progression :
+    <span style="display:inline-block;width:12px;height:12px;background:#38a169;border-radius:2px;vertical-align:middle;"></span> &gt; 6/10 &nbsp;&nbsp;
+    <span style="display:inline-block;width:12px;height:12px;background:#ed8936;border-radius:2px;vertical-align:middle;"></span> 4 à 6/10 &nbsp;&nbsp;
+    <span style="display:inline-block;width:12px;height:12px;background:#e53e3e;border-radius:2px;vertical-align:middle;"></span> &lt; 4/10
+  </div>
+
+  <!-- Synthèse -->
+  <div style="margin-bottom:25px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:10px;">Synthèse</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="padding:10px 15px;background:#f7f7f7;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Score moyen avant</td>
+        <td style="padding:10px 15px;background:#f7f7f7;border-bottom:1px solid #eee;">{{score_moyen_avant}} / 10</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 15px;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Score moyen après</td>
+        <td style="padding:10px 15px;border-bottom:1px solid #eee;">{{score_moyen_apres}} / 10</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 15px;background:#f7f7f7;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Progression moyenne</td>
+        <td style="padding:10px 15px;background:#f7f7f7;border-bottom:1px solid #eee;"><strong>+{{progression_moyenne}}</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:10px 15px;width:220px;font-weight:bold;">Objectifs atteints</td>
+        <td style="padding:10px 15px;">
+          <span style="background:{{color_objectifs}};color:#fff;padding:3px 14px;border-radius:12px;font-size:11px;font-weight:bold;">{{objectifs_atteints}}</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Commentaires formateur -->
+  <div style="margin-bottom:25px;">
+    <div style="font-size:13px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Commentaires du formateur</div>
+    <div style="background:#f7f7f7;padding:12px 18px;border-radius:4px;line-height:1.7;">{{commentaires_formateur}}</div>
+  </div>
+
+  <!-- Signatures -->
+  <table style="width:100%;margin-top:20px;">
+    <tr>
+      <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:18px;border-radius:4px;">
+        <div style="font-weight:bold;color:#1a365d;margin-bottom:12px;">Le formateur</div>
+        <div style="font-size:11px;">{{formateur_nom}}</div>
+        <div style="margin-top:30px;font-size:10px;color:#999;">Date et signature</div>
+      </td>
+      <td style="width:4%;"></td>
+      <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:18px;border-radius:4px;">
+        <div style="font-weight:bold;color:#1a365d;margin-bottom:12px;">L'apprenant</div>
+        <div style="font-size:11px;">{{apprenant_nom}}</div>
+        <div style="margin-top:30px;font-size:10px;color:#999;">Date et signature</div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="margin-top:20px;font-size:9px;color:#999;text-align:center;">Document généré automatiquement le {{date_generation}} — Indicateur 11 du Référentiel National Qualité</div>
+
+</body>
+</html>

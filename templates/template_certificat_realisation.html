@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Certificat de réalisation</title>
+</head>
+<body style="margin:0;padding:40px 50px;font-family:Arial,sans-serif;font-size:12px;color:#333;width:210mm;min-height:297mm;box-sizing:border-box;">
+
+  <!-- En-tête organisme -->
+  <table style="width:100%;margin-bottom:30px;">
+    <tr>
+      <td style="width:80px;vertical-align:top;">
+        <img src="{{logo_url}}" alt="Logo" style="max-width:70px;max-height:70px;">
+      </td>
+      <td style="vertical-align:top;padding-left:15px;">
+        <div style="font-size:16px;font-weight:bold;color:#1a365d;">{{organisme_nom}}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px;">NDA : {{organisme_nda}}</div>
+        <div style="font-size:11px;color:#666;">SIRET : {{organisme_siret}}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Titre -->
+  <div style="text-align:center;margin:30px 0;">
+    <div style="font-size:20px;font-weight:bold;color:#1a365d;border-bottom:3px solid #1a365d;display:inline-block;padding-bottom:8px;">CERTIFICAT DE RÉALISATION</div>
+    <div style="font-size:11px;color:#666;margin-top:8px;">Conforme aux exigences des OPCO</div>
+  </div>
+
+  <!-- Organisme dispensateur -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:13px;font-weight:bold;color:#1a365d;margin-bottom:10px;">Organisme dispensateur</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="padding:8px 15px;background:#f7f7f7;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Raison sociale</td>
+        <td style="padding:8px 15px;background:#f7f7f7;border-bottom:1px solid #eee;">{{organisme_nom}}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 15px;width:220px;font-weight:bold;border-bottom:1px solid #eee;">N° déclaration d'activité</td>
+        <td style="padding:8px 15px;border-bottom:1px solid #eee;">{{organisme_nda}}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 15px;background:#f7f7f7;width:220px;font-weight:bold;">SIRET</td>
+        <td style="padding:8px 15px;background:#f7f7f7;">{{organisme_siret}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Bénéficiaire -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:13px;font-weight:bold;color:#1a365d;margin-bottom:10px;">Bénéficiaire</div>
+    <div style="background:#f7f7f7;padding:12px 18px;border-radius:4px;">
+      <strong>{{apprenant_prenom}} {{apprenant_nom}}</strong>
+    </div>
+  </div>
+
+  <!-- Détails de l'action -->
+  <div style="margin-bottom:25px;">
+    <div style="font-size:13px;font-weight:bold;color:#1a365d;margin-bottom:10px;">Détails de l'action de formation</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="padding:8px 15px;background:#f7f7f7;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Intitulé</td>
+        <td style="padding:8px 15px;background:#f7f7f7;border-bottom:1px solid #eee;">{{formation_intitule}}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 15px;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Nature de l'action</td>
+        <td style="padding:8px 15px;border-bottom:1px solid #eee;">{{nature_action}}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 15px;background:#f7f7f7;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Dates de réalisation</td>
+        <td style="padding:8px 15px;background:#f7f7f7;border-bottom:1px solid #eee;">Du {{session_date_debut}} au {{session_date_fin}}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 15px;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Durée prévue</td>
+        <td style="padding:8px 15px;border-bottom:1px solid #eee;">{{formation_duree_heures}} heures</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 15px;background:#f7f7f7;width:220px;font-weight:bold;border-bottom:1px solid #eee;">Durée réalisée</td>
+        <td style="padding:8px 15px;background:#f7f7f7;border-bottom:1px solid #eee;"><strong>{{heures_realisees}} heures</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:8px 15px;width:220px;font-weight:bold;">Modalité</td>
+        <td style="padding:8px 15px;">{{session_modalite}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Mention légale -->
+  <div style="background:#f7f7f7;padding:12px 18px;border-radius:4px;margin-bottom:30px;font-size:11px;line-height:1.7;color:#555;">
+    Je soussigné(e), représentant(e) de l'organisme de formation <strong>{{organisme_nom}}</strong>, atteste que l'action de formation décrite ci-dessus a été réalisée et certifie l'exactitude des informations mentionnées.
+  </div>
+
+  <!-- Signatures -->
+  <div style="font-size:11px;color:#666;margin-bottom:15px;">Fait à {{organisme_ville}}, le {{date_generation}}</div>
+
+  <table style="width:100%;">
+    <tr>
+      <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:20px;border-radius:4px;">
+        <div style="font-weight:bold;color:#1a365d;margin-bottom:8px;">Pour l'organisme de formation</div>
+        <div style="font-size:11px;">{{organisme_nom}}</div>
+        <div style="margin-top:40px;font-size:10px;color:#999;">Signature et cachet</div>
+      </td>
+      <td style="width:4%;"></td>
+      <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:20px;border-radius:4px;">
+        <div style="font-weight:bold;color:#1a365d;margin-bottom:8px;">Pour l'entreprise</div>
+        <div style="font-size:11px;">{{entreprise_nom}}</div>
+        <div style="margin-top:40px;font-size:10px;color:#999;">Signature et cachet</div>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

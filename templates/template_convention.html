@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Convention de formation</title>
+</head>
+<body style="margin:0;padding:40px 50px;font-family:Arial,sans-serif;font-size:12px;color:#333;width:210mm;min-height:297mm;box-sizing:border-box;">
+
+  <!-- En-tête -->
+  <table style="width:100%;margin-bottom:30px;">
+    <tr>
+      <td style="width:80px;vertical-align:top;">
+        <img src="{{logo_url}}" alt="Logo" style="max-width:70px;max-height:70px;">
+      </td>
+      <td style="vertical-align:top;padding-left:15px;">
+        <div style="font-size:16px;font-weight:bold;color:#1a365d;">{{organisme_nom}}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px;">N° de déclaration d'activité : {{organisme_nda}}</div>
+        <div style="font-size:11px;color:#666;">SIRET : {{organisme_siret}}</div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="text-align:center;margin-bottom:30px;">
+    <div style="font-size:20px;font-weight:bold;color:#1a365d;border-bottom:3px solid #1a365d;display:inline-block;padding-bottom:6px;">CONVENTION DE FORMATION PROFESSIONNELLE</div>
+    <div style="font-size:11px;color:#666;margin-top:8px;">Articles L.6353-1 et L.6353-2 du Code du travail</div>
+  </div>
+
+  <div style="background:#f7f7f7;padding:15px 20px;border-radius:4px;margin-bottom:25px;font-size:12px;">
+    <strong>Entre</strong> l'organisme de formation <strong>{{organisme_nom}}</strong>, NDA {{organisme_nda}}, SIRET {{organisme_siret}}, ci-après dénommé « l'Organisme »,<br><br>
+    <strong>Et</strong> {{entreprise_nom}}, représenté(e) par {{apprenant_nom}}, ci-après dénommé « le Client ».
+  </div>
+
+  <!-- Article 1 -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Article 1 — Objet</div>
+    <p style="margin:0;line-height:1.6;">Le présent contrat a pour objet la réalisation de l'action de formation suivante :</p>
+    <div style="background:#f7f7f7;padding:12px 18px;border-left:4px solid #1a365d;margin-top:8px;border-radius:0 4px 4px 0;">
+      <strong>{{formation_intitule}}</strong><br>
+      <span style="font-size:11px;color:#555;">Objectifs : {{formation_objectifs}}</span>
+    </div>
+  </div>
+
+  <!-- Article 2 -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Article 2 — Durée et dates</div>
+    <p style="margin:0;line-height:1.6;">La formation se déroule sur une durée totale de <strong>{{formation_duree_heures}} heures</strong>, du <strong>{{session_date_debut}}</strong> au <strong>{{session_date_fin}}</strong>.</p>
+  </div>
+
+  <!-- Article 3 -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Article 3 — Lieu et modalité</div>
+    <p style="margin:0;line-height:1.6;">Lieu : <strong>{{session_lieu}}</strong><br>Modalité : <strong>{{session_modalite}}</strong></p>
+  </div>
+
+  <!-- Article 4 -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Article 4 — Prix</div>
+    <p style="margin:0;line-height:1.6;">Le coût total de la formation est fixé à <strong>{{formation_tarif}} EUR</strong> net de taxe (TVA non applicable, article 261-4-4°a du CGI). Ce montant est dû à réception de la facture, émise à l'issue de la formation.</p>
+  </div>
+
+  <!-- Article 5 -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Article 5 — Conditions d'annulation</div>
+    <p style="margin:0;line-height:1.6;">En cas d'annulation par le Client moins de 10 jours ouvrés avant le début de la formation, l'Organisme se réserve le droit de facturer 30 % du coût total. En cas de force majeure, aucune indemnité ne sera due.</p>
+  </div>
+
+  <!-- Article 6 -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Article 6 — Obligations des parties</div>
+    <p style="margin:0;line-height:1.6;">L'Organisme s'engage à fournir les moyens pédagogiques, techniques et d'encadrement nécessaires à la réalisation de l'action de formation. Le Client s'engage à assurer la présence du ou des participants aux dates convenues et à régler le montant dû dans les délais impartis.</p>
+  </div>
+
+  <!-- Signatures -->
+  <div style="margin-top:40px;">
+    <div style="font-size:11px;color:#666;margin-bottom:15px;">Fait en deux exemplaires, le {{date_generation}}</div>
+    <table style="width:100%;">
+      <tr>
+        <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:20px;border-radius:4px;">
+          <div style="font-size:12px;font-weight:bold;color:#1a365d;margin-bottom:15px;">Pour l'Organisme</div>
+          <div style="font-size:11px;">{{organisme_nom}}</div>
+          <div style="font-size:11px;color:#666;">Représentant légal</div>
+          <div style="margin-top:40px;font-size:10px;color:#999;">Signature et cachet</div>
+        </td>
+        <td style="width:4%;"></td>
+        <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:20px;border-radius:4px;">
+          <div style="font-size:12px;font-weight:bold;color:#1a365d;margin-bottom:15px;">Pour le Client</div>
+          <div style="font-size:11px;">{{apprenant_nom}}</div>
+          <div style="font-size:11px;color:#666;">{{entreprise_nom}}</div>
+          <div style="margin-top:40px;font-size:10px;color:#999;">Signature précédée de la mention « Lu et approuvé »</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>PV de satisfaction</title>
+</head>
+<body style="margin:0;padding:40px 50px;font-family:Arial,sans-serif;font-size:12px;color:#333;width:210mm;min-height:297mm;box-sizing:border-box;">
+
+  <!-- En-tête -->
+  <table style="width:100%;margin-bottom:20px;">
+    <tr>
+      <td style="width:80px;vertical-align:top;">
+        <img src="{{logo_url}}" alt="Logo" style="max-width:70px;max-height:70px;">
+      </td>
+      <td style="vertical-align:top;padding-left:15px;">
+        <div style="font-size:16px;font-weight:bold;color:#1a365d;">{{organisme_nom}}</div>
+      </td>
+      <td style="text-align:right;vertical-align:top;">
+        <div style="font-size:10px;color:#999;background:#f7f7f7;padding:4px 10px;border-radius:3px;display:inline-block;">Indicateur 30 — Satisfaction</div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="text-align:center;margin-bottom:25px;">
+    <div style="font-size:18px;font-weight:bold;color:#1a365d;">BILAN DE SATISFACTION</div>
+  </div>
+
+  <!-- Infos session -->
+  <div style="background:#f7f7f7;padding:15px 20px;border-radius:4px;margin-bottom:25px;">
+    <strong>Formation :</strong> {{formation_intitule}}<br>
+    <strong>Session :</strong> Du {{session_date_debut}} au {{session_date_fin}}<br>
+    <strong>Formateur :</strong> {{formateur_nom}}<br>
+    <strong>Nombre de répondants :</strong> {{nb_repondants}} / {{nb_inscrits}}
+  </div>
+
+  <!-- Notes avec barres visuelles -->
+  <div style="font-size:14px;font-weight:bold;color:#1a365d;margin-bottom:12px;">Résultats</div>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:25px;">
+    <tr>
+      <td style="padding:10px 15px;background:#1a365d;color:#fff;font-weight:bold;font-size:11px;width:200px;">Critère</td>
+      <td style="padding:10px 15px;background:#1a365d;color:#fff;font-weight:bold;font-size:11px;width:60px;text-align:center;">Note</td>
+      <td style="padding:10px 15px;background:#1a365d;color:#fff;font-weight:bold;font-size:11px;">Barre</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;font-weight:bold;border-bottom:1px solid #eee;">Note globale</td>
+      <td style="padding:10px 15px;text-align:center;font-weight:bold;border-bottom:1px solid #eee;">{{note_globale}}/10</td>
+      <td style="padding:10px 15px;border-bottom:1px solid #eee;">
+        <div style="background:#e2e8f0;border-radius:4px;height:20px;width:100%;">
+          <div style="background:{{color_globale}};height:20px;border-radius:4px;width:{{pct_globale}}%;min-width:2%;"></div>
+        </div>
+      </td>
+    </tr>
+    <tr style="background:#f7f7f7;">
+      <td style="padding:10px 15px;font-weight:bold;border-bottom:1px solid #eee;">Contenu pédagogique</td>
+      <td style="padding:10px 15px;text-align:center;font-weight:bold;border-bottom:1px solid #eee;">{{note_contenu}}/10</td>
+      <td style="padding:10px 15px;border-bottom:1px solid #eee;">
+        <div style="background:#e2e8f0;border-radius:4px;height:20px;width:100%;">
+          <div style="background:{{color_contenu}};height:20px;border-radius:4px;width:{{pct_contenu}}%;min-width:2%;"></div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;font-weight:bold;border-bottom:1px solid #eee;">Formateur</td>
+      <td style="padding:10px 15px;text-align:center;font-weight:bold;border-bottom:1px solid #eee;">{{note_formateur}}/10</td>
+      <td style="padding:10px 15px;border-bottom:1px solid #eee;">
+        <div style="background:#e2e8f0;border-radius:4px;height:20px;width:100%;">
+          <div style="background:{{color_formateur}};height:20px;border-radius:4px;width:{{pct_formateur}}%;min-width:2%;"></div>
+        </div>
+      </td>
+    </tr>
+    <tr style="background:#f7f7f7;">
+      <td style="padding:10px 15px;font-weight:bold;border-bottom:1px solid #eee;">Organisation</td>
+      <td style="padding:10px 15px;text-align:center;font-weight:bold;border-bottom:1px solid #eee;">{{note_organisation}}/10</td>
+      <td style="padding:10px 15px;border-bottom:1px solid #eee;">
+        <div style="background:#e2e8f0;border-radius:4px;height:20px;width:100%;">
+          <div style="background:{{color_organisation}};height:20px;border-radius:4px;width:{{pct_organisation}}%;min-width:2%;"></div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;font-weight:bold;">Atteinte des objectifs</td>
+      <td style="padding:10px 15px;text-align:center;font-weight:bold;">{{note_objectifs}}/10</td>
+      <td style="padding:10px 15px;">
+        <div style="background:#e2e8f0;border-radius:4px;height:20px;width:100%;">
+          <div style="background:{{color_objectifs}};height:20px;border-radius:4px;width:{{pct_objectifs}}%;min-width:2%;"></div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Légende couleurs -->
+  <div style="font-size:10px;color:#666;margin-bottom:20px;">
+    <span style="display:inline-block;width:12px;height:12px;background:#38a169;border-radius:2px;vertical-align:middle;"></span> &gt; 7/10 &nbsp;&nbsp;
+    <span style="display:inline-block;width:12px;height:12px;background:#ed8936;border-radius:2px;vertical-align:middle;"></span> 5 à 7/10 &nbsp;&nbsp;
+    <span style="display:inline-block;width:12px;height:12px;background:#e53e3e;border-radius:2px;vertical-align:middle;"></span> &lt; 5/10
+  </div>
+
+  <!-- Recommandation -->
+  <div style="text-align:center;margin-bottom:25px;">
+    <span style="background:{{color_recommandation}};color:#fff;padding:6px 20px;border-radius:20px;font-weight:bold;font-size:13px;">{{recommandation}}</span>
+  </div>
+
+  <!-- Verbatim -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:13px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Points forts</div>
+    <div style="background:#f0fff4;border-left:4px solid #38a169;padding:12px 18px;border-radius:0 4px 4px 0;line-height:1.7;">{{points_forts}}</div>
+  </div>
+
+  <div style="margin-bottom:20px;">
+    <div style="font-size:13px;font-weight:bold;color:#1a365d;margin-bottom:8px;">Axes d'amélioration</div>
+    <div style="background:#fffaf0;border-left:4px solid #ed8936;padding:12px 18px;border-radius:0 4px 4px 0;line-height:1.7;">{{axes_amelioration}}</div>
+  </div>
+
+  <!-- Bloc réclamation -->
+  <div style="background:#fff5f5;border:2px solid #e53e3e;border-radius:6px;padding:15px 20px;margin-bottom:25px;">
+    <div style="font-weight:bold;color:#c53030;margin-bottom:6px;">⚠ Réclamation signalée</div>
+    <div style="font-size:12px;color:#742a2a;">{{reclamation_details}}</div>
+    <div style="font-size:10px;color:#9b2c2c;margin-top:6px;">Cette réclamation a été transmise au responsable qualité pour traitement (Indicateur 30).</div>
+  </div>
+
+  <div style="margin-top:20px;font-size:9px;color:#999;text-align:center;">Document généré automatiquement le {{date_generation}} — Indicateur 30 du Référentiel National Qualité</div>
+
+</body>
+</html>

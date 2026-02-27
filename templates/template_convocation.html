@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Convocation à la formation</title>
+</head>
+<body style="margin:0;padding:40px 50px;font-family:Arial,sans-serif;font-size:12px;color:#333;width:210mm;min-height:297mm;box-sizing:border-box;">
+
+  <!-- En-tête -->
+  <table style="width:100%;margin-bottom:30px;">
+    <tr>
+      <td style="width:80px;vertical-align:top;">
+        <img src="{{logo_url}}" alt="Logo" style="max-width:70px;max-height:70px;">
+      </td>
+      <td style="vertical-align:top;padding-left:15px;">
+        <div style="font-size:16px;font-weight:bold;color:#1a365d;">{{organisme_nom}}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px;">{{organisme_adresse}}</div>
+      </td>
+      <td style="text-align:right;vertical-align:top;">
+        <div style="font-size:11px;color:#666;">Le {{date_generation}}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Destinataire -->
+  <div style="margin-bottom:30px;padding:15px 20px;background:#f7f7f7;border-radius:4px;">
+    <div style="font-size:11px;color:#666;">Destinataire :</div>
+    <div style="font-size:14px;font-weight:bold;margin-top:4px;">{{apprenant_prenom}} {{apprenant_nom}}</div>
+    <div style="font-size:11px;color:#666;">{{apprenant_email}}</div>
+  </div>
+
+  <!-- Titre -->
+  <div style="text-align:center;margin-bottom:25px;">
+    <div style="font-size:18px;font-weight:bold;color:#1a365d;">CONVOCATION À LA FORMATION</div>
+  </div>
+
+  <p style="line-height:1.7;margin-bottom:20px;">
+    Madame, Monsieur {{apprenant_nom}},<br><br>
+    Nous avons le plaisir de vous confirmer votre inscription à la formation suivante :
+  </p>
+
+  <!-- Détails formation -->
+  <table style="width:100%;border-collapse:collapse;margin-bottom:25px;">
+    <tr>
+      <td style="padding:10px 15px;background:#1a365d;color:#fff;font-weight:bold;border-radius:4px 4px 0 0;" colspan="2">Détails de la formation</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;background:#f7f7f7;width:180px;font-weight:bold;border-bottom:1px solid #eee;">Intitulé</td>
+      <td style="padding:10px 15px;background:#f7f7f7;border-bottom:1px solid #eee;">{{formation_intitule}}</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;width:180px;font-weight:bold;border-bottom:1px solid #eee;">Dates</td>
+      <td style="padding:10px 15px;border-bottom:1px solid #eee;">Du <strong>{{session_date_debut}}</strong> au <strong>{{session_date_fin}}</strong></td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;background:#f7f7f7;width:180px;font-weight:bold;border-bottom:1px solid #eee;">Horaires</td>
+      <td style="padding:10px 15px;background:#f7f7f7;border-bottom:1px solid #eee;">9h00 – 12h30 / 14h00 – 17h30</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;width:180px;font-weight:bold;border-bottom:1px solid #eee;">Lieu</td>
+      <td style="padding:10px 15px;border-bottom:1px solid #eee;">{{session_lieu}}</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;background:#f7f7f7;width:180px;font-weight:bold;border-bottom:1px solid #eee;">Modalité</td>
+      <td style="padding:10px 15px;background:#f7f7f7;border-bottom:1px solid #eee;">{{session_modalite}}</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 15px;width:180px;font-weight:bold;">Formateur</td>
+      <td style="padding:10px 15px;">{{formateur_nom}}</td>
+    </tr>
+  </table>
+
+  <!-- Bloc distanciel -->
+  <div style="background:#eef4fb;border-left:4px solid #1a365d;padding:12px 18px;border-radius:0 4px 4px 0;margin-bottom:25px;">
+    <div style="font-weight:bold;color:#1a365d;margin-bottom:4px;">Informations de connexion (si distanciel)</div>
+    <div style="font-size:11px;">Lien de connexion : <a href="{{lien_connexion}}" style="color:#1a365d;">{{lien_connexion}}</a><br>
+    Merci de vous connecter 10 minutes avant le début de la session.</div>
+  </div>
+
+  <!-- Consignes -->
+  <div style="margin-bottom:25px;">
+    <div style="font-size:13px;font-weight:bold;color:#1a365d;margin-bottom:8px;">À prévoir</div>
+    <ul style="margin:0;padding-left:20px;line-height:1.8;">
+      <li>Une pièce d'identité</li>
+      <li>De quoi prendre des notes</li>
+      <li>Votre convocation (ce document)</li>
+    </ul>
+  </div>
+
+  <!-- Contact -->
+  <div style="background:#f7f7f7;padding:15px 20px;border-radius:4px;margin-bottom:30px;">
+    <div style="font-weight:bold;margin-bottom:6px;">Contact</div>
+    <div style="font-size:11px;">Email : {{organisme_email}}<br>Téléphone : {{organisme_telephone}}</div>
+  </div>
+
+  <p style="line-height:1.7;">
+    Nous restons à votre disposition pour toute question.<br><br>
+    Cordialement,<br>
+    <strong>{{organisme_nom}}</strong>
+  </p>
+
+</body>
+</html>

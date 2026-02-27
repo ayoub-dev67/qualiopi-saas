@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Feuille d'émargement</title>
+</head>
+<body style="margin:0;padding:40px 50px;font-family:Arial,sans-serif;font-size:12px;color:#333;width:210mm;min-height:297mm;box-sizing:border-box;">
+
+  <!-- En-tête -->
+  <table style="width:100%;margin-bottom:20px;">
+    <tr>
+      <td style="width:80px;vertical-align:top;">
+        <img src="{{logo_url}}" alt="Logo" style="max-width:70px;max-height:70px;">
+      </td>
+      <td style="vertical-align:top;padding-left:15px;">
+        <div style="font-size:16px;font-weight:bold;color:#1a365d;">{{organisme_nom}}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px;">NDA : {{organisme_nda}}</div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="text-align:center;margin-bottom:20px;">
+    <div style="font-size:18px;font-weight:bold;color:#1a365d;">FEUILLE D'ÉMARGEMENT</div>
+  </div>
+
+  <!-- Infos session -->
+  <div style="background:#f7f7f7;padding:15px 20px;border-radius:4px;margin-bottom:20px;">
+    <table style="width:100%;font-size:12px;">
+      <tr>
+        <td style="width:50%;padding:3px 0;"><strong>Formation :</strong> {{formation_intitule}}</td>
+        <td style="width:50%;padding:3px 0;"><strong>Formateur :</strong> {{formateur_nom}}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 0;"><strong>Dates :</strong> Du {{session_date_debut}} au {{session_date_fin}}</td>
+        <td style="padding:3px 0;"><strong>Lieu :</strong> {{session_lieu}}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 0;"><strong>Date du jour :</strong> {{date_jour}}</td>
+        <td style="padding:3px 0;"><strong>Horaires :</strong> 9h00 – 12h30 / 14h00 – 17h30</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Tableau émargement -->
+  <table style="width:100%;border-collapse:collapse;margin-bottom:25px;">
+    <thead>
+      <tr>
+        <th style="background:#1a365d;color:#fff;padding:10px 12px;text-align:left;font-size:11px;border:1px solid #1a365d;">Apprenant</th>
+        <th style="background:#1a365d;color:#fff;padding:10px 12px;text-align:center;font-size:11px;width:100px;border:1px solid #1a365d;">Matin</th>
+        <th style="background:#1a365d;color:#fff;padding:10px 12px;text-align:center;font-size:11px;width:100px;border:1px solid #1a365d;">Après-midi</th>
+        <th style="background:#1a365d;color:#fff;padding:10px 12px;text-align:center;font-size:11px;width:140px;border:1px solid #1a365d;">Horodatage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{rows_emargement}}
+    </tbody>
+  </table>
+
+  <div style="font-size:10px;color:#666;margin-bottom:15px;">
+    ✅ = Présent &nbsp;&nbsp; ❌ = Absent
+  </div>
+
+  <!-- Récapitulatif heures -->
+  <div style="background:#f7f7f7;padding:12px 18px;border-radius:4px;margin-bottom:25px;">
+    <div style="font-weight:bold;color:#1a365d;margin-bottom:6px;">Récapitulatif</div>
+    <div style="font-size:11px;">
+      Total présents matin : {{total_presents_matin}} &nbsp;|&nbsp;
+      Total présents après-midi : {{total_presents_aprem}} &nbsp;|&nbsp;
+      Heures totales : {{total_heures}}h
+    </div>
+  </div>
+
+  <!-- Signature formateur -->
+  <div style="margin-top:20px;">
+    <table style="width:100%;">
+      <tr>
+        <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:18px;border-radius:4px;">
+          <div style="font-weight:bold;color:#1a365d;margin-bottom:12px;">Le formateur</div>
+          <div style="font-size:11px;">{{formateur_nom}}</div>
+          <div style="margin-top:30px;font-size:10px;color:#999;">Date et signature</div>
+        </td>
+        <td style="width:4%;"></td>
+        <td style="width:48%;vertical-align:top;border:1px solid #ddd;padding:18px;border-radius:4px;">
+          <div style="font-weight:bold;color:#1a365d;margin-bottom:12px;">Le responsable pédagogique</div>
+          <div style="margin-top:40px;font-size:10px;color:#999;">Date et signature</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="margin-top:20px;font-size:9px;color:#999;text-align:center;">Document généré automatiquement le {{date_generation}} — Feuille d'émargement obligatoire (article L.6362-2 du Code du travail)</div>
+
+</body>
+</html>
