@@ -1,0 +1,386 @@
+{
+  "name": "Qualiopi — WF5 Relances Automatiques (CRON quotidien)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-relances",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notes": "Déclencheur : tous les jours à 9h. Vérifie les questionnaires envoyés non répondus et envoie les relances selon les délais configurés."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Config",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "read-config",
+      "name": "Lire Config",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [480, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les paramètres de configuration depuis l'onglet Config du classeur 01_Referentiel : delai_relance_1 (2j), delai_relance_2 (5j), delai_relance_3 (10j)."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Questionnaires_Envoyes",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "read-envois",
+      "name": "Lire Envois",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit tous les questionnaires envoyés depuis l'onglet Questionnaires_Envoyes du classeur 02_Suivi_Apprenants. Le filtrage par statut (envoye, relance_1, relance_2) est fait dans le node Code suivant."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Calculer les relances dues\n// ============================================================\n// Pour chaque envoi non répondu, vérifier si le délai de\n// relance est dépassé selon la config :\n//   statut=envoye    → relance_1 si date_envoi + delai_1 dépassé\n//   statut=relance_1 → relance_2 si date_derniere_relance + delai_2 dépassé\n//   statut=relance_2 → relance_3 si date_derniere_relance + delai_3 dépassé\n//   statut=relance_3 → plus de relance (max atteint)\n//   statut=repondu   → ignoré\n// ============================================================\n\nconst envois = $input.all().map(item => item.json);\nconst configRows = $('Lire Config').all().map(item => item.json);\n\n// Lire les délais depuis la config (clé/valeur)\nfunction getConfigValue(key, defaultVal) {\n  const row = configRows.find(r => r.cle === key || r.key === key || r.parametre === key);\n  return row ? parseInt(row.valeur || row.value || defaultVal) : defaultVal;\n}\n\nconst delai1 = getConfigValue('delai_relance_1', 2);\nconst delai2 = getConfigValue('delai_relance_2', 5);\nconst delai3 = getConfigValue('delai_relance_3', 10);\n\nconst now = new Date();\nconst relancesDues = [];\n\nfor (const envoi of envois) {\n  const statut = envoi.statut;\n  if (!statut || statut === 'repondu' || statut === 'relance_3') continue;\n\n  let dateRef, delai, prochainStatut, numRelance;\n\n  if (statut === 'envoye') {\n    dateRef = envoi.date_envoi;\n    delai = delai1;\n    prochainStatut = 'relance_1';\n    numRelance = 1;\n  } else if (statut === 'relance_1') {\n    dateRef = envoi.date_derniere_relance || envoi.date_envoi;\n    delai = delai2;\n    prochainStatut = 'relance_2';\n    numRelance = 2;\n  } else if (statut === 'relance_2') {\n    dateRef = envoi.date_derniere_relance || envoi.date_envoi;\n    delai = delai3;\n    prochainStatut = 'relance_3';\n    numRelance = 3;\n  } else {\n    continue;\n  }\n\n  if (!dateRef) continue;\n\n  const dateEnvoi = new Date(dateRef);\n  const diffJours = Math.floor((now - dateEnvoi) / (1000 * 60 * 60 * 24));\n\n  if (diffJours >= delai) {\n    relancesDues.push({\n      ...envoi,\n      prochain_statut: prochainStatut,\n      num_relance: numRelance,\n      nb_relances: (parseInt(envoi.nb_relances) || 0) + 1,\n      jours_depuis_envoi: diffJours\n    });\n  }\n}\n\nreturn relancesDues.map(r => ({ json: r }));"
+      },
+      "id": "calculate-relances",
+      "name": "Calculer relances dues",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300],
+      "notes": "Pour chaque envoi non répondu, calcule si le délai de relance est dépassé. Filtre statut envoye/relance_1/relance_2, ignore repondu et relance_3. Retourne uniquement les envois nécessitant une relance avec le prochain statut."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "cond-not-empty",
+              "leftValue": "={{ $json.inscription_id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-relances",
+      "name": "Relances à faire",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "notes": "Vérifie qu'il y a des relances à envoyer. TRUE → boucle d'envoi. FALSE → fin du workflow (rien à relancer)."
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "loop-relances",
+      "name": "Boucle Relances",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1440, 300],
+      "notes": "Itère sur chaque relance à envoyer. Traite une relance à la fois : reconstruction URL, envoi email, mise à jour statut. Reboucle jusqu'à épuisement."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Construire l'URL pré-remplie selon le type de questionnaire\n// ============================================================\n// Mapping type → Google Form ID :\n//   positionnement → FORMS_POSITIONNEMENT\n//   satisfaction   → FORMS_SATISFACTION\n//   evaluation     → FORMS_EVALUATION\n//   suivi_froid    → FORMS_SUIVI_FROID\n// ============================================================\n\nconst item = $json;\n\nconst formIds = {\n  'positionnement': '1Tkf-lm7Kd_6EaN7-MXja1zAhAKxqH-j1gOVONl7fUDA',\n  'satisfaction':   '1vjF6Dxw0QgPbJHA_7HBMFnJApcHmLWK9amGm-S5FHfQ',\n  'evaluation':     '1DM9QfOGbClRhxEw8jT6rPIz5mk7_cO_AvxN3OyYjLLg',\n  'suivi_froid':    '1h63PHGz4mTa-4NnY8Na-VUC8lN4jMLNnR9b3Jm-1Twc'\n};\n\nconst type = item.type || 'positionnement';\nconst formId = formIds[type] || formIds['positionnement'];\n\nconst baseUrl = `https://docs.google.com/forms/d/e/${formId}/viewform`;\nconst params = new URLSearchParams({\n  'entry.inscription_id': item.inscription_id || '',\n  'entry.session_id': item.session_id || '',\n  'entry.apprenant_nom': item.apprenant_nom || item.nom || '',\n  'entry.apprenant_prenom': item.apprenant_prenom || item.prenom || ''\n});\n\nconst url = `${baseUrl}?${params.toString()}`;\n\n// Labels pour l'email\nconst typeLabels = {\n  'positionnement': 'positionnement',\n  'satisfaction': 'satisfaction',\n  'evaluation': 'évaluation des acquis',\n  'suivi_froid': 'suivi à froid'\n};\n\nreturn [{\n  json: {\n    ...item,\n    url_formulaire: url,\n    type_label: typeLabels[type] || type\n  }\n}];"
+      },
+      "id": "build-url-form",
+      "name": "Construire URL Form",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 300],
+      "notes": "Reconstruit l'URL pré-remplie du Google Form selon le type de questionnaire (positionnement, satisfaction, evaluation, suivi_froid). Mappe chaque type vers le bon Form ID."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email || $json.apprenant_email || '' }}",
+        "subject": "={{ $json.num_relance === 1 ? '📋' : $json.num_relance === 2 ? '⏰' : '🚨' }} Relance {{ $json.num_relance }}/3 — Questionnaire de {{ $json.type_label }} — {{ $json.formation_intitule || $json.formation || '' }}",
+        "emailType": "html",
+        "message": "={{ $json.num_relance === 1 ? '<h2 style=\"color:#1a365d;\">Rappel amical</h2><p>Bonjour ' + ($json.apprenant_prenom || $json.prenom || '') + ',</p><p>Nous n\\'avons pas encore reçu votre réponse au questionnaire de <strong>' + $json.type_label + '</strong> pour la formation <strong>' + ($json.formation_intitule || $json.formation || '') + '</strong>.</p><p>Votre avis est précieux et nous aide à améliorer nos formations. Pourriez-vous prendre quelques minutes pour le compléter ?</p>' : $json.num_relance === 2 ? '<h2 style=\"color:#dd6b20;\">Second rappel</h2><p>Bonjour ' + ($json.apprenant_prenom || $json.prenom || '') + ',</p><p>Nous vous avons contacté il y a quelques jours concernant le questionnaire de <strong>' + $json.type_label + '</strong> pour la formation <strong>' + ($json.formation_intitule || $json.formation || '') + '</strong>.</p><p>Ce questionnaire fait partie de notre démarche qualité Qualiopi et votre retour est <strong>important</strong> pour nous permettre d\\'améliorer nos formations.</p>' : '<h2 style=\"color:#e53e3e;\">Dernière relance</h2><p>Bonjour ' + ($json.apprenant_prenom || $json.prenom || '') + ',</p><p>Ceci est notre <strong>dernier rappel</strong> concernant le questionnaire de <strong>' + $json.type_label + '</strong> pour la formation <strong>' + ($json.formation_intitule || $json.formation || '') + '</strong>.</p><p>Dans le cadre de notre certification Qualiopi, nous avons l\\'obligation de recueillir votre avis. Nous vous remercions de bien vouloir y répondre <strong>dans les plus brefs délais</strong>.</p>' }}<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:24px auto;\"><tr><td style=\"background-color:{{ $json.num_relance === 3 ? '#e53e3e' : '#1a365d' }};border-radius:6px;\"><a href=\"{{ $json.url_formulaire }}\" target=\"_blank\" style=\"display:inline-block;padding:14px 32px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;\">Compléter le questionnaire</a></td></tr></table><p style=\"font-size:13px;color:#666;\">Si le bouton ne fonctionne pas, copiez ce lien :<br/><a href=\"{{ $json.url_formulaire }}\">{{ $json.url_formulaire }}</a></p><p>Cordialement,<br/>L'équipe pédagogique</p><p style=\"font-size:12px;color:#999;\">Relance {{ $json.num_relance }}/3 — Email généré automatiquement — Système Qualiopi</p>",
+        "options": {}
+      },
+      "id": "send-relance",
+      "name": "Envoyer relance",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1920, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Envoie l'email de relance avec un ton progressif : relance_1=rappel amical, relance_2=rappel ferme, relance_3=dernière relance. Bouton CTA dont la couleur passe au rouge pour la dernière relance."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Questionnaires_Envoyes",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "inscription_id",
+              "lookupValue": "={{ $json.inscription_id }}"
+            },
+            {
+              "lookupColumn": "type",
+              "lookupValue": "={{ $json.type }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "statut",
+              "fieldValue": "={{ $json.prochain_statut }}"
+            },
+            {
+              "column": "nb_relances",
+              "fieldValue": "={{ $json.nb_relances }}"
+            },
+            {
+              "column": "date_derniere_relance",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-statut-envoi",
+      "name": "Mettre à jour statut",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2160, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Met à jour le statut dans Questionnaires_Envoyes : passe à relance_1/relance_2/relance_3, incrémente nb_relances, enregistre date_derniere_relance."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Journal_Systeme",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "date",
+              "fieldValue": "={{ new Date().toLocaleDateString('fr-FR') }}"
+            },
+            {
+              "column": "heure",
+              "fieldValue": "={{ new Date().toLocaleTimeString('fr-FR') }}"
+            },
+            {
+              "column": "workflow",
+              "fieldValue": "W5"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": ""
+            },
+            {
+              "column": "statut",
+              "fieldValue": "OK"
+            },
+            {
+              "column": "details",
+              "fieldValue": "=Relances automatiques envoyées pour les questionnaires non répondus"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-journal",
+      "name": "Log Journal",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2400, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Journal_Systeme du classeur 03_Qualite_KPIs : date, heure, workflow W5, statut OK."
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lire Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Config": {
+      "main": [
+        [
+          {
+            "node": "Lire Envois",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Envois": {
+      "main": [
+        [
+          {
+            "node": "Calculer relances dues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculer relances dues": {
+      "main": [
+        [
+          {
+            "node": "Relances à faire",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Relances à faire": {
+      "main": [
+        [
+          {
+            "node": "Boucle Relances",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boucle Relances": {
+      "main": [
+        [
+          {
+            "node": "Construire URL Form",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire URL Form": {
+      "main": [
+        [
+          {
+            "node": "Envoyer relance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer relance": {
+      "main": [
+        [
+          {
+            "node": "Mettre à jour statut",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mettre à jour statut": {
+      "main": [
+        [
+          {
+            "node": "Boucle Relances",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [{ "name": "Qualiopi", "id": "qualiopi-tag" }],
+  "triggerCount": 1,
+  "pinData": {}
+}
