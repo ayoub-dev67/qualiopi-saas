@@ -1,0 +1,474 @@
+{
+  "name": "Qualiopi — WF4 Amélioration Continue (CRON hebdo)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "cron-amelioration",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notes": "Déclencheur : tous les lundis à 8h. Traite les nouvelles réclamations et calcule les KPIs qualité hebdomadaires."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Reclamations",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "statut",
+              "lookupValue": "nouvelle"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-reclamations",
+      "name": "Lire Réclamations",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [480, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les réclamations avec statut=nouvelle depuis l'onglet Reclamations du classeur 03_Qualite_KPIs."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "cond-not-empty",
+              "leftValue": "={{ $json.reclamation_id || $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-reclamations",
+      "name": "Nouvelles réclamations",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "notes": "Vérifie que des réclamations nouvelles existent. TRUE → boucle de traitement. FALSE → passe directement au calcul des KPIs."
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "loop-reclamations",
+      "name": "Boucle Réclamations",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [960, 300],
+      "notes": "Itère sur chaque réclamation nouvelle. Traite une réclamation à la fois : mise à jour statut, notification email. Reboucle jusqu'à épuisement."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Reclamations",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "reclamation_id",
+              "lookupValue": "={{ $json.reclamation_id || $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "statut",
+              "fieldValue": "en_traitement"
+            },
+            {
+              "column": "date_prise_en_charge",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-statut-reclamation",
+      "name": "Passer en traitement",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1200, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Met à jour le statut de la réclamation à en_traitement et enregistre la date de prise en charge dans l'onglet Reclamations de SHEETS_03."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_responsable || $json.destinataire || '' }}",
+        "subject": "=🚨 [Qualiopi] Réclamation à traiter — {{ $json.reclamation_id || $json.id }} — {{ $json.formation_intitule || $json.formation || 'N/A' }}",
+        "emailType": "html",
+        "message": "=<h2 style=\"color:#e53e3e;\">Nouvelle réclamation à traiter</h2><p>Une réclamation nécessite votre attention :</p><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f7fafc;border-radius:6px;padding:16px;margin:16px 0;\"><tr><td><p style=\"font-size:14px;color:#333;margin:0 0 6px;\"><strong>ID :</strong> {{ $json.reclamation_id || $json.id }}</p><p style=\"font-size:14px;color:#333;margin:0 0 6px;\"><strong>Formation :</strong> {{ $json.formation_intitule || $json.formation || 'N/A' }}</p><p style=\"font-size:14px;color:#333;margin:0 0 6px;\"><strong>Session :</strong> {{ $json.session_id || 'N/A' }}</p><p style=\"font-size:14px;color:#333;margin:0 0 6px;\"><strong>Apprenant :</strong> {{ $json.apprenant_nom || '' }} {{ $json.apprenant_prenom || '' }}</p><p style=\"font-size:14px;color:#333;margin:0 0 6px;\"><strong>Date :</strong> {{ $json.date_reclamation || $json.date || '' }}</p><p style=\"font-size:14px;color:#333;margin:0;\"><strong>Motif :</strong> {{ $json.motif || $json.description || '' }}</p></td></tr></table><div style=\"background-color:#fff5f5;border-left:4px solid #e53e3e;padding:12px 16px;margin:16px 0;border-radius:0 4px 4px 0;\"><p style=\"font-size:13px;color:#742a2a;margin:0;\"><strong>Indicateur 31 :</strong> Cette réclamation doit faire l'objet d'un traitement documenté conformément au RNQ.</p></div><p style=\"font-size:12px;color:#999;\">Email généré automatiquement — Workflow Amélioration Continue W4</p>",
+        "options": {}
+      },
+      "id": "notify-responsable",
+      "name": "Notifier responsable",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1440, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Envoie un email d'alerte au responsable qualité avec les détails de la réclamation. Rappel Indicateur 31 du RNQ."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Satisfaction",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "read-satisfaction",
+      "name": "Lire Satisfaction",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1680, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit toutes les lignes de l'onglet Satisfaction du classeur 03_Qualite_KPIs pour le calcul des KPIs."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Calculer les KPIs qualité hebdomadaires\n// ============================================================\n// KPIs calculés :\n//   - note_moyenne_globale : moyenne des notes globales satisfaction\n//   - taux_recommandation : % de recommandation (oui/total)\n//   - nb_reclamations_ouvertes : réclamations non clôturées\n//   - taux_completion_emargement : % émargements complétés\n// ============================================================\n\nconst satisfactions = $input.all().map(item => item.json);\n\n// Note moyenne globale\nconst notes = satisfactions\n  .map(s => parseFloat(s.note_globale || s.note_moyenne || 0))\n  .filter(n => !isNaN(n) && n > 0);\nconst noteMoyenne = notes.length > 0\n  ? (notes.reduce((sum, n) => sum + n, 0) / notes.length).toFixed(2)\n  : '0';\n\n// Taux de recommandation\nconst recommandations = satisfactions.filter(s =>\n  s.recommandation === 'TRUE' || s.recommandation === true || s.recommandation === 'oui'\n);\nconst tauxRecommandation = satisfactions.length > 0\n  ? ((recommandations.length / satisfactions.length) * 100).toFixed(1)\n  : '0';\n\n// Nombre de réclamations ouvertes (depuis le node Lire Réclamations)\n// On compte les réclamations qui ne sont pas clôturées\nlet nbReclamationsOuvertes = 0;\ntry {\n  const reclamations = $('Lire Réclamations').all().map(item => item.json);\n  nbReclamationsOuvertes = reclamations.filter(r =>\n    r.statut !== 'cloturee' && r.statut !== 'resolue'\n  ).length;\n} catch (e) {\n  nbReclamationsOuvertes = 0;\n}\n\n// Taux de complétion émargement\nconst totalInscrits = satisfactions.length || 1;\nconst emargementComplets = satisfactions.filter(s =>\n  s.emargement_ok === 'TRUE' || s.emargement_ok === true\n).length;\nconst tauxEmargement = ((emargementComplets / totalInscrits) * 100).toFixed(1);\n\nconst dateCalcul = new Date().toLocaleDateString('fr-FR');\nconst semaine = `S${Math.ceil((new Date().getTime() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))}`;\n\nreturn [{\n  json: {\n    date: dateCalcul,\n    semaine,\n    note_moyenne_globale: noteMoyenne,\n    taux_recommandation: tauxRecommandation,\n    nb_reclamations_ouvertes: nbReclamationsOuvertes,\n    taux_completion_emargement: tauxEmargement,\n    nb_reponses_satisfaction: satisfactions.length\n  }\n}];"
+      },
+      "id": "calculate-kpis",
+      "name": "Calculer KPIs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1920, 300],
+      "notes": "Calcule les KPIs qualité hebdomadaires : note moyenne globale, taux de recommandation, nombre de réclamations ouvertes, taux de complétion émargement. Agrège les données satisfaction et réclamations."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "KPIs",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "date",
+              "fieldValue": "={{ $json.date }}"
+            },
+            {
+              "column": "semaine",
+              "fieldValue": "={{ $json.semaine }}"
+            },
+            {
+              "column": "note_moyenne_globale",
+              "fieldValue": "={{ $json.note_moyenne_globale }}"
+            },
+            {
+              "column": "taux_recommandation",
+              "fieldValue": "={{ $json.taux_recommandation }}"
+            },
+            {
+              "column": "nb_reclamations_ouvertes",
+              "fieldValue": "={{ $json.nb_reclamations_ouvertes }}"
+            },
+            {
+              "column": "taux_completion_emargement",
+              "fieldValue": "={{ $json.taux_completion_emargement }}"
+            },
+            {
+              "column": "nb_reponses_satisfaction",
+              "fieldValue": "={{ $json.nb_reponses_satisfaction }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "write-kpis",
+      "name": "Écrire KPIs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2160, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet KPIs du classeur 03_Qualite_KPIs avec la date, semaine et les 4 KPIs calculés."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Lire Réclamations').first().json.email_responsable || '' }}",
+        "subject": "=📊 [Qualiopi] Rapport qualité hebdomadaire — {{ $json.semaine }} — {{ $json.date }}",
+        "emailType": "html",
+        "message": "=<h2 style=\"color:#1a365d;\">Rapport qualité hebdomadaire</h2><p>Voici le récapitulatif des indicateurs qualité pour la semaine <strong>{{ $json.semaine }}</strong> :</p><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin:16px 0;\"><tr style=\"background-color:#1a365d;\"><th style=\"padding:10px 14px;color:#fff;text-align:left;font-size:13px;\">Indicateur</th><th style=\"padding:10px 14px;color:#fff;text-align:center;font-size:13px;width:120px;\">Valeur</th></tr><tr><td style=\"padding:10px 14px;border-bottom:1px solid #e2e8f0;\">Note moyenne globale</td><td style=\"padding:10px 14px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:bold;\">{{ $json.note_moyenne_globale }}/10</td></tr><tr style=\"background-color:#f7fafc;\"><td style=\"padding:10px 14px;border-bottom:1px solid #e2e8f0;\">Taux de recommandation</td><td style=\"padding:10px 14px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:bold;\">{{ $json.taux_recommandation }}%</td></tr><tr><td style=\"padding:10px 14px;border-bottom:1px solid #e2e8f0;\">Réclamations ouvertes</td><td style=\"padding:10px 14px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:bold;color:#e53e3e;\">{{ $json.nb_reclamations_ouvertes }}</td></tr><tr style=\"background-color:#f7fafc;\"><td style=\"padding:10px 14px;border-bottom:1px solid #e2e8f0;\">Taux complétion émargement</td><td style=\"padding:10px 14px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:bold;\">{{ $json.taux_completion_emargement }}%</td></tr><tr><td style=\"padding:10px 14px;\">Réponses satisfaction</td><td style=\"padding:10px 14px;text-align:center;font-weight:bold;\">{{ $json.nb_reponses_satisfaction }}</td></tr></table><p style=\"font-size:12px;color:#999;\">Rapport généré automatiquement — Workflow Amélioration Continue W4</p>",
+        "options": {}
+      },
+      "id": "send-rapport-hebdo",
+      "name": "Rapport hebdo",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2400, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Envoie le rapport qualité hebdomadaire au responsable qualité avec un tableau HTML des KPIs : note moyenne, taux recommandation, réclamations ouvertes, taux émargement."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Journal_Systeme",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "date",
+              "fieldValue": "={{ new Date().toLocaleDateString('fr-FR') }}"
+            },
+            {
+              "column": "heure",
+              "fieldValue": "={{ new Date().toLocaleTimeString('fr-FR') }}"
+            },
+            {
+              "column": "workflow",
+              "fieldValue": "W4"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": ""
+            },
+            {
+              "column": "statut",
+              "fieldValue": "OK"
+            },
+            {
+              "column": "details",
+              "fieldValue": "=Amélioration continue : réclamations traitées, KPIs calculés, rapport hebdo envoyé"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-journal",
+      "name": "Log Journal",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2640, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Journal_Systeme du classeur 03_Qualite_KPIs : date, heure, workflow W4, statut OK."
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lire Réclamations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Réclamations": {
+      "main": [
+        [
+          {
+            "node": "Nouvelles réclamations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nouvelles réclamations": {
+      "main": [
+        [
+          {
+            "node": "Boucle Réclamations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lire Satisfaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boucle Réclamations": {
+      "main": [
+        [
+          {
+            "node": "Passer en traitement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lire Satisfaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Passer en traitement": {
+      "main": [
+        [
+          {
+            "node": "Notifier responsable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notifier responsable": {
+      "main": [
+        [
+          {
+            "node": "Boucle Réclamations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Satisfaction": {
+      "main": [
+        [
+          {
+            "node": "Calculer KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculer KPIs": {
+      "main": [
+        [
+          {
+            "node": "Écrire KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Écrire KPIs": {
+      "main": [
+        [
+          {
+            "node": "Rapport hebdo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rapport hebdo": {
+      "main": [
+        [
+          {
+            "node": "Log Journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [{ "name": "Qualiopi", "id": "qualiopi-tag" }],
+  "triggerCount": 1,
+  "pinData": {}
+}
