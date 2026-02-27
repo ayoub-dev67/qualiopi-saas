@@ -1,0 +1,974 @@
+{
+  "name": "Qualiopi — WF0 Setup Session (CRON)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-setup-session",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notes": "Déclencheur : toutes les 5 minutes. Cherche les sessions planifiées dont le setup n'a pas encore été exécuté (workflow_0_ok = FALSE)."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "read-sessions",
+      "name": "Lire Sessions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [480, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit toutes les lignes de l'onglet Sessions du classeur 01_Referentiel_Qualiopi."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "cond-not-empty",
+              "leftValue": "={{ $json.session_id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            },
+            {
+              "id": "cond-wf0-false",
+              "leftValue": "={{ $json.workflow_0_ok }}",
+              "rightValue": "FALSE",
+              "operator": { "type": "string", "operation": "equals" }
+            },
+            {
+              "id": "cond-statut-planifiee",
+              "leftValue": "={{ $json.statut }}",
+              "rightValue": "planifiee",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-sessions",
+      "name": "Filtrer",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "notes": "Filtre les sessions : résultats non vides, workflow_0_ok = FALSE et statut = planifiee. Seules les sessions non encore initialisées passent."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Formations",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "formation_id",
+              "lookupValue": "={{ $json.formation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-formation",
+      "name": "Lire Formation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [960, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lookup de la formation associée à la session via formation_id dans l'onglet Formations du classeur 01_Referentiel."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Formateurs",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "formateur_id",
+              "lookupValue": "={{ $('Filtrer').item.json.formateur_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-formateur",
+      "name": "Lire Formateur",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1200, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lookup du formateur associé à la session via formateur_id dans l'onglet Formateurs du classeur 01_Referentiel."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Organisme",
+          "mode": "name"
+        },
+        "options": {
+          "range": "A2:Z2"
+        }
+      },
+      "id": "read-organisme",
+      "name": "Lire Organisme",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1440, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit la ligne 2 (données uniques) de l'onglet Organisme du classeur 01_Referentiel : nom, SIRET, NDA, adresse, responsable qualité, etc."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "cond-dossier-complet",
+              "leftValue": "={{ $('Lire Formateur').item.json.dossier_complet }}",
+              "rightValue": "true",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-dossier-formateur",
+      "name": "Vérifier dossier formateur",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1680, 300],
+      "notes": "Vérifie si le dossier administratif du formateur est complet (CV, diplômes, etc.). TRUE → continue le setup. FALSE → envoie une alerte email puis continue."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Lire Organisme').item.json.email_responsable_qualite || $('Lire Organisme').item.json.email }}",
+        "subject": "=⚠️ [Qualiopi] Dossier formateur incomplet — {{ $('Lire Formateur').item.json.prenom }} {{ $('Lire Formateur').item.json.nom }} — Session {{ $('Filtrer').item.json.session_id }}",
+        "emailType": "html",
+        "message": "=<h2 style=\"color:#e53e3e;\">Dossier formateur incomplet</h2><p>Le dossier administratif du formateur <strong>{{ $('Lire Formateur').item.json.prenom }} {{ $('Lire Formateur').item.json.nom }}</strong> ({{ $('Lire Formateur').item.json.formateur_id }}) est incomplet.</p><p><strong>Session :</strong> {{ $('Filtrer').item.json.session_id }}<br/><strong>Formation :</strong> {{ $('Lire Formation').item.json.intitule }}<br/><strong>Date début :</strong> {{ $('Filtrer').item.json.date_debut }}</p><p>Merci de compléter le dossier (CV, diplômes, attestations) avant le démarrage de la session.</p><p style=\"font-size:12px;color:#999;\">Email généré automatiquement — Workflow Setup Session</p>",
+        "options": {
+          "replyTo": "noreply@qualiopi.local"
+        }
+      },
+      "id": "alerte-dossier-incomplet",
+      "name": "Alerte dossier incomplet",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1920, 480],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Branche FALSE du node 'Vérifier dossier formateur'. Envoie un email d'alerte au responsable qualité pour signaler que le dossier administratif du formateur est incomplet avant le démarrage de la session."
+    },
+    {
+      "parameters": {
+        "name": "={{ new Date($('Filtrer').item.json.date_debut).getFullYear() || new Date().getFullYear() }}",
+        "driveId": {
+          "__rl": true,
+          "value": "default",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1fme_PLgAFktTszOGgofaRiHwDhSjOTf5",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "create-folder-annee",
+      "name": "Créer dossier année",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2160, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      },
+      "notes": "Crée (ou retrouve) le dossier année (ex: 2026) dans le dossier racine Drive QUALIOPI_PREUVES. Si le dossier existe déjà, Google Drive en crée un nouveau — à gérer en amont ou via recherche préalable."
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Lire Formation').item.json.intitule }}",
+        "driveId": {
+          "__rl": true,
+          "value": "default",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Créer dossier année').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "create-folder-formation",
+      "name": "Créer dossier formation",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2400, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      },
+      "notes": "Crée le sous-dossier formation (intitulé) dans le dossier année."
+    },
+    {
+      "parameters": {
+        "name": "=Session_{{ $('Filtrer').item.json.date_debut }}_{{ $('Lire Formateur').item.json.nom }}",
+        "driveId": {
+          "__rl": true,
+          "value": "default",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Créer dossier formation').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "create-folder-session",
+      "name": "Créer dossier session",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2640, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      },
+      "notes": "Crée le sous-dossier session (Session_{date_debut}_{nom_formateur}) dans le dossier formation."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Créer 6 sous-dossiers dans le dossier session\n// ============================================================\n// Arborescence standard Qualiopi :\n//   00_Admin        — Convention, convocation, contrats\n//   01_Pedagogie    — Programme, supports, ressources\n//   02_Emargement   — Feuilles de présence\n//   03_Evaluation   — PV positionnement, évaluations acquis\n//   04_Satisfaction — PV satisfaction, questionnaires\n//   05_Certificats  — Attestations, certificats de réalisation\n// ============================================================\n\nconst sessionFolderId = $('Créer dossier session').item.json.id;\n\nconst sousDossiers = [\n  '00_Admin',\n  '01_Pedagogie',\n  '02_Emargement',\n  '03_Evaluation',\n  '04_Satisfaction',\n  '05_Certificats'\n];\n\n// Retourne un item par sous-dossier à créer\n// Le node suivant (Google Drive) traitera chaque item\nreturn sousDossiers.map(nom => ({\n  json: {\n    folder_name: nom,\n    parent_folder_id: sessionFolderId,\n    session_id: $('Filtrer').item.json.session_id,\n    formation_intitule: $('Lire Formation').item.json.intitule,\n    formateur_nom: $('Lire Formateur').item.json.nom\n  }\n}));"
+      },
+      "id": "create-sous-dossiers",
+      "name": "Créer sous-dossiers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2880, 300],
+      "notes": "Prépare les 6 sous-dossiers standard de l'arborescence Qualiopi : 00_Admin, 01_Pedagogie, 02_Emargement, 03_Evaluation, 04_Satisfaction, 05_Certificats. Émet un item par sous-dossier pour traitement par le node suivant (Google Drive en boucle)."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inscriptions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $('Filtrer').item.json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-inscrits",
+      "name": "Lire Inscrits",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [3120, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les inscriptions de la session courante depuis l'onglet Inscriptions du classeur 02_Suivi_Apprenants. Filtre par session_id."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Préparer le HTML de la convention de formation\n// ============================================================\n// Lit le template templates/template_convention.html depuis le\n// filesystem n8n et remplace les placeholders {{variable}}.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_convention.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\nconst formateur = $('Lire Formateur').item.json;\nconst organisme = $('Lire Organisme').item.json;\n\n// Mapping des placeholders\nconst replacements = {\n  'organisme_nom': organisme.nom || '',\n  'organisme_adresse': organisme.adresse || '',\n  'organisme_siret': organisme.siret || '',\n  'organisme_nda': organisme.nda || '',\n  'organisme_representant': organisme.representant || organisme.responsable_qualite || '',\n  'formation_intitule': formation.intitule || '',\n  'formation_objectifs': formation.objectifs || '',\n  'formation_duree': formation.duree_heures || '',\n  'formation_modalite': formation.modalite || '',\n  'formation_prerequis': formation.prerequis || '',\n  'formation_programme': formation.programme || '',\n  'formation_tarif': formation.tarif || '',\n  'session_id': session.session_id || '',\n  'date_debut': session.date_debut || '',\n  'date_fin': session.date_fin || '',\n  'lieu': session.lieu || '',\n  'horaires': session.horaires || '',\n  'formateur_nom': formateur.nom || '',\n  'formateur_prenom': formateur.prenom || '',\n  'formateur_qualite': formateur.qualite || formateur.specialite || '',\n  'date_generation': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{\n  json: {\n    html_convention: html,\n    nom_fichier: `Convention_${session.session_id}_${formation.intitule}.pdf`,\n    session_id: session.session_id,\n    admin_folder_id: $('Créer sous-dossiers').first().json.parent_folder_id\n  }\n}];"
+      },
+      "id": "prepare-convention",
+      "name": "Préparer Convention",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3360, 300],
+      "notes": "Lit le fichier template templates/template_convention.html depuis le filesystem n8n et remplace tous les placeholders {{variable}} avec les données session/formation/formateur/organisme. N'embarque PAS le template dans le workflow."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://gotenberg:3000/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formData",
+              "name": "files",
+              "value": "={{ $json.html_convention }}",
+              "inputDataFieldName": "index.html"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperWidth",
+              "value": "8.27"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperHeight",
+              "value": "11.69"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginTop",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginBottom",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginLeft",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginRight",
+              "value": "0.4"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "generate-convention-pdf",
+      "name": "Générer Convention PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3600, 300],
+      "notes": "Envoie le HTML de la convention à Gotenberg pour conversion en PDF A4. Retourne le fichier binaire PDF."
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Préparer Convention').item.json.nom_fichier }}",
+        "driveId": {
+          "__rl": true,
+          "value": "default",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Préparer Convention').item.json.admin_folder_id }}",
+          "mode": "id"
+        },
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "upload-convention",
+      "name": "Upload Convention",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [3840, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      },
+      "notes": "Upload le PDF de la convention dans le sous-dossier 00_Admin du dossier session sur Google Drive."
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "loop-inscrits",
+      "name": "Boucle Inscrits",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [4080, 300],
+      "notes": "Itère sur chaque inscrit de la session. Traite un inscrit à la fois : génération convocation PDF, upload Drive, envoi email. Reboucle jusqu'à épuisement de la liste."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Préparer le HTML de la convocation individuelle\n// ============================================================\n// Lit le template templates/template_convocation.html depuis le\n// filesystem n8n et remplace les placeholders {{variable}}.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_convocation.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst inscrit = $json;\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\nconst formateur = $('Lire Formateur').item.json;\nconst organisme = $('Lire Organisme').item.json;\n\nconst replacements = {\n  'organisme_nom': organisme.nom || '',\n  'organisme_adresse': organisme.adresse || '',\n  'organisme_siret': organisme.siret || '',\n  'organisme_nda': organisme.nda || '',\n  'apprenant_nom': inscrit.nom || '',\n  'apprenant_prenom': inscrit.prenom || '',\n  'apprenant_email': inscrit.email || '',\n  'formation_intitule': formation.intitule || '',\n  'formation_duree': formation.duree_heures || '',\n  'formation_modalite': formation.modalite || '',\n  'session_id': session.session_id || '',\n  'date_debut': session.date_debut || '',\n  'date_fin': session.date_fin || '',\n  'lieu': session.lieu || '',\n  'horaires': session.horaires || '',\n  'formateur_nom': formateur.nom || '',\n  'formateur_prenom': formateur.prenom || '',\n  'date_generation': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{\n  json: {\n    ...inscrit,\n    html_convocation: html,\n    nom_fichier: `Convocation_${session.session_id}_${inscrit.nom}_${inscrit.prenom}.pdf`,\n    admin_folder_id: $('Préparer Convention').item.json.admin_folder_id\n  }\n}];"
+      },
+      "id": "prepare-convocation",
+      "name": "Préparer Convocation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4320, 300],
+      "notes": "Lit le fichier template templates/template_convocation.html depuis le filesystem n8n et remplace les placeholders {{variable}} avec les données de l'inscrit courant, session, formation, formateur, organisme. N'embarque PAS le template."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://gotenberg:3000/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formData",
+              "name": "files",
+              "value": "={{ $json.html_convocation }}",
+              "inputDataFieldName": "index.html"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperWidth",
+              "value": "8.27"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperHeight",
+              "value": "11.69"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginTop",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginBottom",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginLeft",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginRight",
+              "value": "0.4"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "generate-convocation-pdf",
+      "name": "Générer Convocation PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4560, 300],
+      "notes": "Envoie le HTML de la convocation à Gotenberg pour conversion en PDF A4. Retourne le fichier binaire PDF."
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Préparer Convocation').item.json.nom_fichier }}",
+        "driveId": {
+          "__rl": true,
+          "value": "default",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Préparer Convocation').item.json.admin_folder_id }}",
+          "mode": "id"
+        },
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "upload-convocation",
+      "name": "Upload Convocation",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [4800, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      },
+      "notes": "Upload le PDF de la convocation individuelle dans le sous-dossier 00_Admin du dossier session sur Google Drive."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Préparer Convocation').item.json.apprenant_email || $('Préparer Convocation').item.json.email }}",
+        "subject": "=Convocation — {{ $('Lire Formation').item.json.intitule }} — {{ $('Filtrer').item.json.date_debut }}",
+        "emailType": "html",
+        "message": "=<h2 style=\"color:#1a365d;\">Convocation à la formation</h2><p>Bonjour {{ $('Préparer Convocation').item.json.apprenant_prenom || $('Préparer Convocation').item.json.prenom }},</p><p>Vous êtes convoqué(e) à la formation <strong>{{ $('Lire Formation').item.json.intitule }}</strong>.</p><p><strong>Date :</strong> du {{ $('Filtrer').item.json.date_debut }} au {{ $('Filtrer').item.json.date_fin }}<br/><strong>Lieu :</strong> {{ $('Filtrer').item.json.lieu }}<br/><strong>Horaires :</strong> {{ $('Filtrer').item.json.horaires }}<br/><strong>Formateur :</strong> {{ $('Lire Formateur').item.json.prenom }} {{ $('Lire Formateur').item.json.nom }}</p><p>Vous trouverez votre convocation en pièce jointe.</p><p>Cordialement,<br/>{{ $('Lire Organisme').item.json.nom }}</p><p style=\"font-size:12px;color:#999;\">Email généré automatiquement — Système Qualiopi</p>",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          }
+        }
+      },
+      "id": "send-convocation",
+      "name": "Envoyer Convocation",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [5040, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Envoie la convocation par email à l'inscrit avec le PDF en pièce jointe. Contient les infos de la formation, dates, lieu et formateur."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $('Filtrer').item.json.session_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "workflow_0_ok",
+              "fieldValue": "TRUE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mark-workflow-ok",
+      "name": "Marquer workflow_0_ok",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [5280, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Met à jour la colonne workflow_0_ok = TRUE dans l'onglet Sessions du classeur 01_Referentiel pour marquer la session comme initialisée. Empêche le CRON de retraiter cette session."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Journal_Systeme",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "date",
+              "fieldValue": "={{ new Date().toLocaleDateString('fr-FR') }}"
+            },
+            {
+              "column": "heure",
+              "fieldValue": "={{ new Date().toLocaleTimeString('fr-FR') }}"
+            },
+            {
+              "column": "workflow",
+              "fieldValue": "W0"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": "={{ $('Filtrer').item.json.session_id }}"
+            },
+            {
+              "column": "statut",
+              "fieldValue": "OK"
+            },
+            {
+              "column": "details",
+              "fieldValue": "=Setup session terminé : dossiers Drive créés, convention générée, convocations envoyées"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-journal",
+      "name": "Log Journal",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [5520, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Journal_Systeme du classeur 03_Qualite_KPIs : date, heure, workflow W0, session_id, statut OK."
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lire Sessions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Sessions": {
+      "main": [
+        [
+          {
+            "node": "Filtrer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrer": {
+      "main": [
+        [
+          {
+            "node": "Lire Formation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Formation": {
+      "main": [
+        [
+          {
+            "node": "Lire Formateur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Formateur": {
+      "main": [
+        [
+          {
+            "node": "Lire Organisme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Organisme": {
+      "main": [
+        [
+          {
+            "node": "Vérifier dossier formateur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vérifier dossier formateur": {
+      "main": [
+        [
+          {
+            "node": "Créer dossier année",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alerte dossier incomplet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerte dossier incomplet": {
+      "main": [
+        [
+          {
+            "node": "Créer dossier année",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer dossier année": {
+      "main": [
+        [
+          {
+            "node": "Créer dossier formation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer dossier formation": {
+      "main": [
+        [
+          {
+            "node": "Créer dossier session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer dossier session": {
+      "main": [
+        [
+          {
+            "node": "Créer sous-dossiers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer sous-dossiers": {
+      "main": [
+        [
+          {
+            "node": "Lire Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Inscrits": {
+      "main": [
+        [
+          {
+            "node": "Préparer Convention",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Convention": {
+      "main": [
+        [
+          {
+            "node": "Générer Convention PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Générer Convention PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload Convention",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Convention": {
+      "main": [
+        [
+          {
+            "node": "Boucle Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boucle Inscrits": {
+      "main": [
+        [
+          {
+            "node": "Préparer Convocation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Marquer workflow_0_ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Convocation": {
+      "main": [
+        [
+          {
+            "node": "Générer Convocation PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Générer Convocation PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload Convocation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Convocation": {
+      "main": [
+        [
+          {
+            "node": "Envoyer Convocation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer Convocation": {
+      "main": [
+        [
+          {
+            "node": "Boucle Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marquer workflow_0_ok": {
+      "main": [
+        [
+          {
+            "node": "Log Journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [{ "name": "Qualiopi", "id": "qualiopi-tag" }],
+  "triggerCount": 1,
+  "pinData": {}
+}
