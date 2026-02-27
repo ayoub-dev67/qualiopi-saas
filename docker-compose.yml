@@ -14,6 +14,7 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - GENERIC_TIMEZONE=Europe/Paris
+      - NODE_FUNCTION_ALLOW_BUILTIN=fs
     restart: unless-stopped
 
   gotenberg:
