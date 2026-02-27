@@ -1,0 +1,422 @@
+{
+  "name": "WF3 - Satisfaction & Évaluation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/10 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "b1a0f7e1-0001-4a00-b000-000000000001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "list",
+          "cachedResultName": "Sessions"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "statut",
+              "lookupValue": "terminee"
+            },
+            {
+              "lookupColumn": "workflow_3_ok",
+              "lookupValue": "FALSE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1a0f7e1-0002-4a00-b000-000000000002",
+      "name": "Lire Sessions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [510, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1a0f7e1-0003-4a00-b000-000000000003",
+      "name": "Filtrer",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [770, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inscriptions",
+          "mode": "list",
+          "cachedResultName": "Inscriptions"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1a0f7e1-0004-4a00-b000-000000000004",
+      "name": "Lire Inscrits",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1030, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Formations",
+          "mode": "list",
+          "cachedResultName": "Formations"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "formation_id",
+              "lookupValue": "={{ $('Lire Sessions').first().json.formation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1a0f7e1-0005-4a00-b000-000000000005",
+      "name": "Lire Formation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1290, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "b1a0f7e1-0006-4a00-b000-000000000006",
+      "name": "Boucle Inscrits",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1550, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst FORM_SATISFACTION = '1vjF6Dxw0QgPbJHA_7HBMFnJApcHmLWK9amGm-S5FHfQ';\nconst FORM_EVALUATION = '1DM9QfOGbClRhxEw8jT6rPIz5mk7_cO_AvxN3OyYjLLg';\n\nfor (const item of items) {\n  const inscription_id = item.json.inscription_id;\n  const session_id = item.json.session_id;\n\n  item.json.url_satisfaction = `https://docs.google.com/forms/d/${FORM_SATISFACTION}/viewform?usp=pp_url&entry.inscription_id=${encodeURIComponent(inscription_id)}&entry.session_id=${encodeURIComponent(session_id)}`;\n  item.json.url_evaluation = `https://docs.google.com/forms/d/${FORM_EVALUATION}/viewform?usp=pp_url&entry.inscription_id=${encodeURIComponent(inscription_id)}&entry.session_id=${encodeURIComponent(session_id)}`;\n}\n\nreturn items;"
+      },
+      "id": "b1a0f7e1-0007-4a00-b000-000000000007",
+      "name": "Construire URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1810, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Évaluation et satisfaction — {{ $('Lire Formation').first().json.intitule }}",
+        "emailType": "html",
+        "message": "=<p>Bonjour {{ $json.prenom }} {{ $json.nom }},</p>\n<p>Suite à votre formation <strong>{{ $('Lire Formation').first().json.intitule }}</strong>, nous vous invitons à compléter les questionnaires suivants :</p>\n<ul>\n  <li><a href=\"{{ $json.url_satisfaction }}\">Questionnaire de satisfaction</a></li>\n  <li><a href=\"{{ $json.url_evaluation }}\">Questionnaire d'évaluation des acquis</a></li>\n</ul>\n<p>Merci de votre participation.</p>\n<p>Cordialement,<br>L'équipe formation</p>",
+        "options": {}
+      },
+      "id": "b1a0f7e1-0008-4a00-b000-000000000008",
+      "name": "Envoyer questionnaires",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2070, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth2",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Questionnaires_Envoyés",
+          "mode": "list",
+          "cachedResultName": "Questionnaires_Envoyés"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inscription_id": "={{ $json.inscription_id }}",
+            "session_id": "={{ $json.session_id }}",
+            "email": "={{ $json.email }}",
+            "type": "satisfaction",
+            "date_envoi": "={{ $now.toISO() }}",
+            "statut": "envoye"
+          }
+        },
+        "options": {}
+      },
+      "id": "b1a0f7e1-0009-4a00-b000-000000000009",
+      "name": "Log envoi satisfaction",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2330, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Questionnaires_Envoyés",
+          "mode": "list",
+          "cachedResultName": "Questionnaires_Envoyés"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inscription_id": "={{ $json.inscription_id }}",
+            "session_id": "={{ $json.session_id }}",
+            "email": "={{ $json.email }}",
+            "type": "evaluation",
+            "date_envoi": "={{ $now.toISO() }}",
+            "statut": "envoye"
+          }
+        },
+        "options": {}
+      },
+      "id": "b1a0f7e1-0010-4a00-b000-000000000010",
+      "name": "Log envoi evaluation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2590, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "list",
+          "cachedResultName": "Sessions"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Lire Sessions').first().json.session_id }}",
+            "workflow_3_ok": "TRUE"
+          },
+          "matchingColumns": ["session_id"]
+        },
+        "options": {}
+      },
+      "id": "b1a0f7e1-0012-4a00-b000-000000000012",
+      "name": "Marquer workflow_3_ok",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1810, 540],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Journal_Systeme",
+          "mode": "list",
+          "cachedResultName": "Journal_Systeme"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "workflow": "W3",
+            "statut": "OK",
+            "date": "={{ $now.toISO() }}",
+            "details": "=Envoi questionnaires satisfaction et évaluation pour session {{ $('Lire Sessions').first().json.session_id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "b1a0f7e1-0013-4a00-b000-000000000013",
+      "name": "Log Journal",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2070, 540],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [{ "node": "Lire Sessions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Lire Sessions": {
+      "main": [
+        [{ "node": "Filtrer", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filtrer": {
+      "main": [
+        [{ "node": "Lire Inscrits", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Lire Inscrits": {
+      "main": [
+        [{ "node": "Lire Formation", "type": "main", "index": 0 }]
+      ]
+    },
+    "Lire Formation": {
+      "main": [
+        [{ "node": "Boucle Inscrits", "type": "main", "index": 0 }]
+      ]
+    },
+    "Boucle Inscrits": {
+      "main": [
+        [{ "node": "Construire URLs", "type": "main", "index": 0 }],
+        [{ "node": "Marquer workflow_3_ok", "type": "main", "index": 0 }]
+      ]
+    },
+    "Construire URLs": {
+      "main": [
+        [{ "node": "Envoyer questionnaires", "type": "main", "index": 0 }]
+      ]
+    },
+    "Envoyer questionnaires": {
+      "main": [
+        [{ "node": "Log envoi satisfaction", "type": "main", "index": 0 }]
+      ]
+    },
+    "Log envoi satisfaction": {
+      "main": [
+        [{ "node": "Log envoi evaluation", "type": "main", "index": 0 }]
+      ]
+    },
+    "Log envoi evaluation": {
+      "main": [
+        [{ "node": "Boucle Inscrits", "type": "main", "index": 0 }]
+      ]
+    },
+    "Marquer workflow_3_ok": {
+      "main": [
+        [{ "node": "Log Journal", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-02-27T00:00:00.000Z",
+  "versionId": "wf3-satisfaction-evaluation-v1"
+}
