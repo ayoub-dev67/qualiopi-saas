@@ -16,7 +16,10 @@
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "notes": "Déclencheur : toutes les 5 minutes. Cherche les sessions planifiées dont le setup n'a pas encore été exécuté (workflow_0_ok = FALSE)."
     },
     {
@@ -38,7 +41,10 @@
       "name": "Lire Sessions",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [480, 300],
+      "position": [
+        480,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -50,25 +56,36 @@
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true },
+          "options": {
+            "caseSensitive": true
+          },
           "conditions": [
             {
               "id": "cond-not-empty",
               "leftValue": "={{ $json.session_id }}",
               "rightValue": "",
-              "operator": { "type": "string", "operation": "notEmpty" }
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
             },
             {
               "id": "cond-wf0-false",
               "leftValue": "={{ $json.workflow_0_ok }}",
               "rightValue": "FALSE",
-              "operator": { "type": "string", "operation": "equals" }
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
             },
             {
               "id": "cond-statut-planifiee",
               "leftValue": "={{ $json.statut }}",
               "rightValue": "planifiee",
-              "operator": { "type": "string", "operation": "equals" }
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
             }
           ],
           "combinator": "and"
@@ -78,7 +95,10 @@
       "name": "Filtrer",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [720, 300],
+      "position": [
+        720,
+        300
+      ],
       "notes": "Filtre les sessions : résultats non vides, workflow_0_ok = FALSE et statut = planifiee. Seules les sessions non encore initialisées passent."
     },
     {
@@ -108,7 +128,10 @@
       "name": "Lire Formation",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [960, 300],
+      "position": [
+        960,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -144,7 +167,10 @@
       "name": "Lire Formateur",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [1200, 300],
+      "position": [
+        1200,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -174,7 +200,10 @@
       "name": "Lire Organisme",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [1440, 300],
+      "position": [
+        1440,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -186,13 +215,18 @@
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true },
+          "options": {
+            "caseSensitive": true
+          },
           "conditions": [
             {
               "id": "cond-dossier-complet",
               "leftValue": "={{ $('Lire Formateur').item.json.dossier_complet }}",
               "rightValue": "true",
-              "operator": { "type": "string", "operation": "equals" }
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
             }
           ],
           "combinator": "and"
@@ -202,7 +236,10 @@
       "name": "Vérifier dossier formateur",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1680, 300],
+      "position": [
+        1680,
+        300
+      ],
       "notes": "Vérifie si le dossier administratif du formateur est complet (CV, diplômes, etc.). TRUE → continue le setup. FALSE → envoie une alerte email puis continue."
     },
     {
@@ -219,7 +256,10 @@
       "name": "Alerte dossier incomplet",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1920, 480],
+      "position": [
+        1920,
+        480
+      ],
       "credentials": {
         "gmailOAuth2": {
           "id": "GMAIL_CREDENTIAL_ID",
@@ -247,7 +287,10 @@
       "name": "Créer dossier année",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
-      "position": [2160, 300],
+      "position": [
+        2160,
+        300
+      ],
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
@@ -275,7 +318,10 @@
       "name": "Créer dossier formation",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
-      "position": [2400, 300],
+      "position": [
+        2400,
+        300
+      ],
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
@@ -303,7 +349,10 @@
       "name": "Créer dossier session",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
-      "position": [2640, 300],
+      "position": [
+        2640,
+        300
+      ],
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
@@ -320,7 +369,10 @@
       "name": "Créer sous-dossiers",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2880, 300],
+      "position": [
+        2880,
+        300
+      ],
       "notes": "Prépare les 6 sous-dossiers standard de l'arborescence Qualiopi : 00_Admin, 01_Pedagogie, 02_Emargement, 03_Evaluation, 04_Satisfaction, 05_Certificats. Émet un item par sous-dossier pour traitement par le node suivant (Google Drive en boucle)."
     },
     {
@@ -350,7 +402,10 @@
       "name": "Lire Inscrits",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [3120, 300],
+      "position": [
+        3120,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -361,13 +416,16 @@
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// Préparer le HTML de la convention de formation\n// ============================================================\n// Lit le template templates/template_convention.html depuis le\n// filesystem n8n et remplace les placeholders {{variable}}.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_convention.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\nconst formateur = $('Lire Formateur').item.json;\nconst organisme = $('Lire Organisme').item.json;\n\n// Mapping des placeholders\nconst replacements = {\n  'organisme_nom': organisme.nom || '',\n  'organisme_adresse': organisme.adresse || '',\n  'organisme_siret': organisme.siret || '',\n  'organisme_nda': organisme.nda || '',\n  'organisme_representant': organisme.representant || organisme.responsable_qualite || '',\n  'formation_intitule': formation.intitule || '',\n  'formation_objectifs': formation.objectifs || '',\n  'formation_duree': formation.duree_heures || '',\n  'formation_modalite': formation.modalite || '',\n  'formation_prerequis': formation.prerequis || '',\n  'formation_programme': formation.programme || '',\n  'formation_tarif': formation.tarif || '',\n  'session_id': session.session_id || '',\n  'date_debut': session.date_debut || '',\n  'date_fin': session.date_fin || '',\n  'lieu': session.lieu || '',\n  'horaires': session.horaires || '',\n  'formateur_nom': formateur.nom || '',\n  'formateur_prenom': formateur.prenom || '',\n  'formateur_qualite': formateur.qualite || formateur.specialite || '',\n  'date_generation': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{ json: { nom_fichier: `Convention_${session.session_id}_${formation.intitule}.pdf`, session_id: session.session_id, admin_folder_id: $('Créer sous-dossiers').first().json.parent_folder_id }, binary: { file: await this.helpers.prepareBinaryData(Buffer.from(html, 'utf8'), 'index.html', 'text/html') } }];"
+        "jsCode": "// ============================================================\n// Préparer le HTML de la convention de formation\n// ============================================================\n// Lit le template templates/template_convention.html depuis le\n// filesystem n8n et remplace les placeholders {{variable}}.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_convention.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\nconst formateur = $('Lire Formateur').item.json;\nconst organisme = $('Lire Organisme').item.json;\nconst inscrit = $('Lire Inscrits').first().json;\n\n// Mapping des placeholders\nconst replacements = {\n  'organisme_nom': organisme.nom || '',\n  'organisme_nda': organisme.nda || '',\n  'organisme_siret': organisme.siret || '',\n  'organisme_adresse': organisme.adresse || '',\n  'organisme_logo_url': organisme.logo_url || '',\n  'formation_intitule': formation.intitule || '',\n  'formation_objectifs': formation.objectifs || '',\n  'formation_duree_heures': formation.duree_heures || '',\n  'formation_tarif': formation.tarif || '',\n  'formation_prerequis': formation.prerequis || '',\n  'session_date_debut': session.date_debut || '',\n  'session_date_fin': session.date_fin || '',\n  'session_lieu': session.lieu || '',\n  'session_modalite': session.modalite || formation.modalite || '',\n  'session_id': session.session_id || '',\n  'formateur_nom': formateur.nom || '',\n  'formateur_prenom': formateur.prenom || '',\n  'apprenant_nom': inscrit.nom || '',\n  'entreprise_nom': inscrit.entreprise || '',\n  'date_du_jour': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{ json: { nom_fichier: `Convention_${session.session_id}_${formation.intitule}.pdf`, session_id: session.session_id, admin_folder_id: $('Créer sous-dossiers').first().json.parent_folder_id }, binary: { file: await this.helpers.prepareBinaryData(Buffer.from(html, 'utf8'), 'index.html', 'text/html') } }];"
       },
       "id": "prepare-convention",
       "name": "Préparer Convention",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3360, 300],
+      "position": [
+        3360,
+        300
+      ],
       "notes": "Lit le fichier template templates/template_convention.html depuis le filesystem n8n et remplace tous les placeholders {{variable}} avec les données session/formation/formateur/organisme. N'embarque PAS le template dans le workflow."
     },
     {
@@ -427,7 +485,10 @@
       "name": "Générer Convention PDF",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3600, 300],
+      "position": [
+        3600,
+        300
+      ],
       "notes": "Envoie le HTML de la convention à Gotenberg pour conversion en PDF A4. Retourne le fichier binaire PDF."
     },
     {
@@ -450,7 +511,10 @@
       "name": "Upload Convention",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
-      "position": [3840, 300],
+      "position": [
+        3840,
+        300
+      ],
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
@@ -469,18 +533,24 @@
       "name": "Boucle Inscrits",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [4080, 300],
+      "position": [
+        4080,
+        300
+      ],
       "notes": "Itère sur chaque inscrit de la session. Traite un inscrit à la fois : génération convocation PDF, upload Drive, envoi email. Reboucle jusqu'à épuisement de la liste."
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// Préparer le HTML de la convocation individuelle\n// ============================================================\n// Lit le template templates/template_convocation.html depuis le\n// filesystem n8n et remplace les placeholders {{variable}}.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_convocation.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst inscrit = $json;\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\nconst formateur = $('Lire Formateur').item.json;\nconst organisme = $('Lire Organisme').item.json;\n\nconst replacements = {\n  'organisme_nom': organisme.nom || '',\n  'organisme_adresse': organisme.adresse || '',\n  'organisme_siret': organisme.siret || '',\n  'organisme_nda': organisme.nda || '',\n  'apprenant_nom': inscrit.nom || '',\n  'apprenant_prenom': inscrit.prenom || '',\n  'apprenant_email': inscrit.email || '',\n  'formation_intitule': formation.intitule || '',\n  'formation_duree': formation.duree_heures || '',\n  'formation_modalite': formation.modalite || '',\n  'session_id': session.session_id || '',\n  'date_debut': session.date_debut || '',\n  'date_fin': session.date_fin || '',\n  'lieu': session.lieu || '',\n  'horaires': session.horaires || '',\n  'formateur_nom': formateur.nom || '',\n  'formateur_prenom': formateur.prenom || '',\n  'date_generation': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{ json: { ...inscrit, nom_fichier: `Convocation_${session.session_id}_${inscrit.nom}_${inscrit.prenom}.pdf`, session_id: session.session_id, admin_folder_id: $('Préparer Convention').item.json.admin_folder_id }, binary: { file: await this.helpers.prepareBinaryData(Buffer.from(html, 'utf8'), 'index.html', 'text/html') } }];"
+        "jsCode": "// ============================================================\n// Préparer le HTML de la convocation individuelle\n// ============================================================\n// Lit le template templates/template_convocation.html depuis le\n// filesystem n8n et remplace les placeholders {{variable}}.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_convocation.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst inscrit = $json;\nconst session = $('Filtrer').item.json;\nconst formation = $('Lire Formation').item.json;\nconst formateur = $('Lire Formateur').item.json;\nconst organisme = $('Lire Organisme').item.json;\n\nconst replacements = {\n  'organisme_nom': organisme.nom || '',\n  'organisme_nda': organisme.nda || '',\n  'organisme_siret': organisme.siret || '',\n  'organisme_adresse': organisme.adresse || '',\n  'organisme_logo_url': organisme.logo_url || '',\n  'formation_intitule': formation.intitule || '',\n  'formation_objectifs': formation.objectifs || '',\n  'formation_duree_heures': formation.duree_heures || '',\n  'formation_tarif': formation.tarif || '',\n  'formation_prerequis': formation.prerequis || '',\n  'session_date_debut': session.date_debut || '',\n  'session_date_fin': session.date_fin || '',\n  'session_lieu': session.lieu || '',\n  'session_modalite': session.modalite || formation.modalite || '',\n  'session_id': session.session_id || '',\n  'formateur_nom': formateur.nom || '',\n  'formateur_prenom': formateur.prenom || '',\n  'apprenant_nom': inscrit.nom || '',\n  'entreprise_nom': inscrit.entreprise || '',\n  'date_du_jour': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{ json: { ...inscrit, nom_fichier: `Convocation_${session.session_id}_${inscrit.nom}_${inscrit.prenom}.pdf`, session_id: session.session_id, admin_folder_id: $('Préparer Convention').item.json.admin_folder_id }, binary: { file: await this.helpers.prepareBinaryData(Buffer.from(html, 'utf8'), 'index.html', 'text/html') } }];"
       },
       "id": "prepare-convocation",
       "name": "Préparer Convocation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [4320, 300],
+      "position": [
+        4320,
+        300
+      ],
       "notes": "Lit le fichier template templates/template_convocation.html depuis le filesystem n8n et remplace les placeholders {{variable}} avec les données de l'inscrit courant, session, formation, formateur, organisme. N'embarque PAS le template."
     },
     {
@@ -540,7 +610,10 @@
       "name": "Générer Convocation PDF",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [4560, 300],
+      "position": [
+        4560,
+        300
+      ],
       "notes": "Envoie le HTML de la convocation à Gotenberg pour conversion en PDF A4. Retourne le fichier binaire PDF."
     },
     {
@@ -563,7 +636,10 @@
       "name": "Upload Convocation",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
-      "position": [4800, 300],
+      "position": [
+        4800,
+        300
+      ],
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
@@ -574,7 +650,7 @@
     },
     {
       "parameters": {
-        "sendTo": "={{ $('Préparer Convocation').item.json.apprenant_email || $('Préparer Convocation').item.json.email }}",
+        "sendTo": "={{ $('Boucle Inscrits').item.json.email }}",
         "subject": "=Convocation — {{ $('Lire Formation').item.json.intitule }} — {{ $('Filtrer').item.json.date_debut }}",
         "emailType": "html",
         "message": "=<h2 style=\"color:#1a365d;\">Convocation à la formation</h2><p>Bonjour {{ $('Préparer Convocation').item.json.apprenant_prenom || $('Préparer Convocation').item.json.prenom }},</p><p>Vous êtes convoqué(e) à la formation <strong>{{ $('Lire Formation').item.json.intitule }}</strong>.</p><p><strong>Date :</strong> du {{ $('Filtrer').item.json.date_debut }} au {{ $('Filtrer').item.json.date_fin }}<br/><strong>Lieu :</strong> {{ $('Filtrer').item.json.lieu }}<br/><strong>Horaires :</strong> {{ $('Filtrer').item.json.horaires }}<br/><strong>Formateur :</strong> {{ $('Lire Formateur').item.json.prenom }} {{ $('Lire Formateur').item.json.nom }}</p><p>Vous trouverez votre convocation en pièce jointe.</p><p>Cordialement,<br/>{{ $('Lire Organisme').item.json.nom }}</p><p style=\"font-size:12px;color:#999;\">Email généré automatiquement — Système Qualiopi</p>",
@@ -592,7 +668,10 @@
       "name": "Envoyer Convocation",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [5040, 300],
+      "position": [
+        5040,
+        300
+      ],
       "credentials": {
         "gmailOAuth2": {
           "id": "GMAIL_CREDENTIAL_ID",
@@ -636,7 +715,10 @@
       "name": "Marquer workflow_0_ok",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [5280, 300],
+      "position": [
+        5280,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -692,7 +774,10 @@
       "name": "Log Journal",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [5520, 300],
+      "position": [
+        5520,
+        300
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
@@ -966,7 +1051,12 @@
     "callerPolicy": "workflowsFromSameOwner"
   },
   "staticData": null,
-  "tags": [{ "name": "Qualiopi", "id": "qualiopi-tag" }],
+  "tags": [
+    {
+      "name": "Qualiopi",
+      "id": "qualiopi-tag"
+    }
+  ],
   "triggerCount": 1,
   "pinData": {}
 }
