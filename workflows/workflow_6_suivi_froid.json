@@ -1,0 +1,797 @@
+{
+  "name": "Qualiopi — WF6 Suivi à Froid + Attestations (CRON hebdo)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "cron-suivi-froid",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notes": "Déclencheur : tous les lundis à 8h. Vérifie les sessions terminées dont la date de fin remonte à 6 mois pour envoyer le suivi à froid et générer attestations/certificats."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sessions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "statut",
+              "lookupValue": "terminee"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-sessions",
+      "name": "Lire Sessions terminées",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [480, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les sessions avec statut=terminee depuis l'onglet Sessions du classeur 01_Referentiel."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Filtrer les sessions éligibles au suivi à froid\n// ============================================================\n// Critères :\n//   - date_fin + 180 jours dépassé (6 mois)\n//   - suivi_froid_envoye !== TRUE (pas encore envoyé)\n// ============================================================\n\nconst sessions = $input.all().map(item => item.json);\nconst now = new Date();\nconst DELAI_JOURS = 180;\n\nconst eligibles = sessions.filter(s => {\n  if (s.suivi_froid_envoye === 'TRUE' || s.suivi_froid_envoye === true) return false;\n  if (!s.date_fin) return false;\n\n  const dateFin = new Date(s.date_fin);\n  const diffJours = Math.floor((now - dateFin) / (1000 * 60 * 60 * 24));\n  return diffJours >= DELAI_JOURS;\n});\n\nif (eligibles.length === 0) {\n  return [{ json: { _empty: true } }];\n}\n\nreturn eligibles.map(s => ({ json: { ...s, jours_depuis_fin: Math.floor((now - new Date(s.date_fin)) / (1000 * 60 * 60 * 24)) } }));"
+      },
+      "id": "filter-6-mois",
+      "name": "Filtrer sessions à 6 mois",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "notes": "Calcule pour chaque session terminée si date_fin + 180 jours est dépassé et si le suivi à froid n'a pas encore été envoyé. Ne retourne que les sessions éligibles."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "cond-not-empty",
+              "leftValue": "={{ $json.session_id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-eligibles",
+      "name": "Sessions éligibles",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 300],
+      "notes": "Vérifie qu'il y a des sessions éligibles au suivi à froid. TRUE → continue le traitement. FALSE → fin du workflow."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inscriptions",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "session_id",
+              "lookupValue": "={{ $json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-inscrits",
+      "name": "Lire Inscrits",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1200, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit les inscriptions de la session éligible depuis l'onglet Inscriptions du classeur 02_Suivi_Apprenants. Filtre par session_id."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Formations",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "formation_id",
+              "lookupValue": "={{ $('Sessions éligibles').item.json.formation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "read-formation",
+      "name": "Lire Formation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1440, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lookup de la formation associée à la session via formation_id dans l'onglet Formations du classeur 01_Referentiel."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1rpT0wuOEo_JgwuTgyG3w82HYMkzF4k1VzuwWQ5UGeck",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Organisme",
+          "mode": "name"
+        },
+        "options": {
+          "range": "A2:Z2"
+        }
+      },
+      "id": "read-organisme",
+      "name": "Lire Organisme",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1680, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Lit la ligne 2 (données uniques) de l'onglet Organisme du classeur 01_Referentiel : nom, SIRET, NDA, adresse, responsable qualité, etc."
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "loop-inscrits",
+      "name": "Boucle Inscrits",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1920, 300],
+      "notes": "Itère sur chaque inscrit de la session. Pour chacun : envoi suivi à froid, génération attestation PDF, génération certificat PDF, envoi email avec PJ. Reboucle jusqu'à épuisement."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Construire l'URL pré-remplie du Google Form Suivi à Froid\n// ============================================================\n\nconst inscrit = $json;\nconst session = $('Sessions éligibles').item.json;\nconst formation = $('Lire Formation').item.json;\n\nconst formId = '1h63PHGz4mTa-4NnY8Na-VUC8lN4jMLNnR9b3Jm-1Twc';\n\nconst baseUrl = `https://docs.google.com/forms/d/e/${formId}/viewform`;\nconst params = new URLSearchParams({\n  'entry.inscription_id': inscrit.inscription_id || '',\n  'entry.session_id': session.session_id || '',\n  'entry.apprenant_nom': inscrit.nom || '',\n  'entry.apprenant_prenom': inscrit.prenom || ''\n});\n\nconst url = `${baseUrl}?${params.toString()}`;\n\nreturn [{\n  json: {\n    ...inscrit,\n    url_suivi_froid: url,\n    session_id: session.session_id,\n    formation_intitule: formation.intitule || '',\n    date_debut: session.date_debut || '',\n    date_fin: session.date_fin || ''\n  }\n}];"
+      },
+      "id": "build-url-suivi-froid",
+      "name": "Construire URL Suivi Froid",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2160, 300],
+      "notes": "Construit l'URL pré-remplie du Google Form de suivi à froid avec inscription_id, session_id, nom et prénom en query params."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Suivi à froid — {{ $json.formation_intitule }}",
+        "emailType": "html",
+        "message": "=<h2 style=\"color:#1a365d;\">Questionnaire de suivi à froid</h2><p>Bonjour {{ $json.prenom }},</p><p>Il y a 6 mois, vous avez suivi la formation <strong>{{ $json.formation_intitule }}</strong> (du {{ $json.date_debut }} au {{ $json.date_fin }}).</p><p>Dans le cadre de notre démarche qualité Qualiopi, nous souhaitons évaluer l'impact de cette formation sur votre pratique professionnelle.</p><p>Ce questionnaire ne prend que quelques minutes :</p><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:24px auto;\"><tr><td style=\"background-color:#1a365d;border-radius:6px;\"><a href=\"{{ $json.url_suivi_froid }}\" target=\"_blank\" style=\"display:inline-block;padding:14px 32px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;\">Compléter le suivi à froid</a></td></tr></table><p style=\"font-size:13px;color:#666;\">Si le bouton ne fonctionne pas, copiez ce lien :<br/><a href=\"{{ $json.url_suivi_froid }}\">{{ $json.url_suivi_froid }}</a></p><p>Cordialement,<br/>L'équipe pédagogique</p><p style=\"font-size:12px;color:#999;\">Email généré automatiquement — Système Qualiopi</p>",
+        "options": {}
+      },
+      "id": "send-suivi-froid",
+      "name": "Envoyer suivi froid",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [2400, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Envoie le questionnaire de suivi à froid par email à l'inscrit avec le lien vers le Google Form pré-rempli."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sgr7DNrlQbV23HACKPWhhqlc2cRU17Y-Z5zGVmqL7JE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Questionnaires_Envoyes",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "inscription_id",
+              "fieldValue": "={{ $('Construire URL Suivi Froid').item.json.inscription_id }}"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": "={{ $('Construire URL Suivi Froid').item.json.session_id }}"
+            },
+            {
+              "column": "type",
+              "fieldValue": "suivi_froid"
+            },
+            {
+              "column": "date_envoi",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "column": "statut",
+              "fieldValue": "envoye"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-envoi",
+      "name": "Log envoi",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2640, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Questionnaires_Envoyes du classeur 02_Suivi_Apprenants : inscription_id, session_id, type=suivi_froid, date_envoi, statut=envoye."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Préparer le HTML de l'attestation de formation\n// ============================================================\n// Lit le template templates/template_attestation.html depuis le\n// filesystem n8n et remplace les placeholders {{variable}}.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_attestation.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst inscrit = $('Construire URL Suivi Froid').item.json;\nconst session = $('Sessions éligibles').item.json;\nconst formation = $('Lire Formation').item.json;\nconst organisme = $('Lire Organisme').item.json;\n\nconst replacements = {\n  'organisme_nom': organisme.nom || '',\n  'organisme_adresse': organisme.adresse || '',\n  'organisme_siret': organisme.siret || '',\n  'organisme_nda': organisme.nda || '',\n  'organisme_representant': organisme.representant || organisme.responsable_qualite || '',\n  'apprenant_nom': inscrit.nom || '',\n  'apprenant_prenom': inscrit.prenom || '',\n  'formation_intitule': formation.intitule || '',\n  'formation_duree': formation.duree_heures || '',\n  'formation_objectifs': formation.objectifs || '',\n  'session_id': session.session_id || '',\n  'date_debut': session.date_debut || '',\n  'date_fin': session.date_fin || '',\n  'lieu': session.lieu || '',\n  'date_generation': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{\n  json: {\n    html_attestation: html,\n    nom_fichier_attestation: `Attestation_${session.session_id}_${inscrit.nom}_${inscrit.prenom}.pdf`,\n    inscrit_email: inscrit.email || '',\n    inscrit_prenom: inscrit.prenom || '',\n    inscrit_nom: inscrit.nom || '',\n    formation_intitule: formation.intitule || '',\n    session_id: session.session_id || ''\n  }\n}];"
+      },
+      "id": "prepare-attestation",
+      "name": "Préparer Attestation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2880, 300],
+      "notes": "Lit le fichier template templates/template_attestation.html depuis le filesystem n8n et remplace les placeholders {{variable}} avec les données inscrit/session/formation/organisme. N'embarque PAS le template."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://gotenberg:3000/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formData",
+              "name": "files",
+              "value": "={{ $json.html_attestation }}",
+              "inputDataFieldName": "index.html"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperWidth",
+              "value": "8.27"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperHeight",
+              "value": "11.69"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginTop",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginBottom",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginLeft",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginRight",
+              "value": "0.4"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "generate-attestation-pdf",
+      "name": "Générer Attestation PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3120, 300],
+      "notes": "Envoie le HTML de l'attestation à Gotenberg pour conversion en PDF A4. Retourne le fichier binaire PDF."
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Préparer Attestation').item.json.nom_fichier_attestation }}",
+        "driveId": {
+          "__rl": true,
+          "value": "default",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Préparer Attestation').item.json.folder_05_certificats_id || '' }}",
+          "mode": "id"
+        },
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "upload-attestation",
+      "name": "Upload Attestation",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [3360, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      },
+      "notes": "Upload le PDF de l'attestation dans le sous-dossier 05_Certificats du dossier session sur Google Drive."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Préparer le HTML du certificat de réalisation\n// ============================================================\n// Lit le template templates/template_certificat_realisation.html\n// depuis le filesystem n8n et remplace les placeholders.\n// Le fichier HTML n'est PAS embarqué dans ce workflow.\n// ============================================================\n\nconst fs = require('fs');\nconst templatePath = '/data/templates/template_certificat_realisation.html';\nlet html = fs.readFileSync(templatePath, 'utf8');\n\nconst attestationData = $('Préparer Attestation').item.json;\nconst session = $('Sessions éligibles').item.json;\nconst formation = $('Lire Formation').item.json;\nconst organisme = $('Lire Organisme').item.json;\nconst inscrit = $('Construire URL Suivi Froid').item.json;\n\nconst replacements = {\n  'organisme_nom': organisme.nom || '',\n  'organisme_adresse': organisme.adresse || '',\n  'organisme_siret': organisme.siret || '',\n  'organisme_nda': organisme.nda || '',\n  'organisme_representant': organisme.representant || organisme.responsable_qualite || '',\n  'apprenant_nom': inscrit.nom || '',\n  'apprenant_prenom': inscrit.prenom || '',\n  'formation_intitule': formation.intitule || '',\n  'formation_duree': formation.duree_heures || '',\n  'session_id': session.session_id || '',\n  'date_debut': session.date_debut || '',\n  'date_fin': session.date_fin || '',\n  'lieu': session.lieu || '',\n  'nb_heures_realisees': session.nb_heures_realisees || formation.duree_heures || '',\n  'date_generation': new Date().toLocaleDateString('fr-FR')\n};\n\nfor (const [key, value] of Object.entries(replacements)) {\n  html = html.replace(new RegExp(`\\\\{\\\\{${key}\\\\}\\\\}`, 'g'), value);\n}\n\nreturn [{\n  json: {\n    html_certificat: html,\n    nom_fichier_certificat: `Certificat_realisation_${session.session_id}_${inscrit.nom}_${inscrit.prenom}.pdf`,\n    inscrit_email: inscrit.email || '',\n    inscrit_prenom: inscrit.prenom || '',\n    inscrit_nom: inscrit.nom || '',\n    formation_intitule: formation.intitule || '',\n    nom_fichier_attestation: attestationData.nom_fichier_attestation\n  }\n}];"
+      },
+      "id": "prepare-certificat",
+      "name": "Préparer Certificat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3600, 300],
+      "notes": "Lit le fichier template templates/template_certificat_realisation.html depuis le filesystem n8n et remplace les placeholders {{variable}}. N'embarque PAS le template."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://gotenberg:3000/forms/chromium/convert/html",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formData",
+              "name": "files",
+              "value": "={{ $json.html_certificat }}",
+              "inputDataFieldName": "index.html"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperWidth",
+              "value": "8.27"
+            },
+            {
+              "parameterType": "formData",
+              "name": "paperHeight",
+              "value": "11.69"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginTop",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginBottom",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginLeft",
+              "value": "0.4"
+            },
+            {
+              "parameterType": "formData",
+              "name": "marginRight",
+              "value": "0.4"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "generate-certificat-pdf",
+      "name": "Générer Certificat PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3840, 300],
+      "notes": "Envoie le HTML du certificat de réalisation à Gotenberg pour conversion en PDF A4. Retourne le fichier binaire PDF."
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Préparer Certificat').item.json.nom_fichier_certificat }}",
+        "driveId": {
+          "__rl": true,
+          "value": "default",
+          "mode": "list"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Préparer Attestation').item.json.folder_05_certificats_id || '' }}",
+          "mode": "id"
+        },
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "upload-certificat",
+      "name": "Upload Certificat",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [4080, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive OAuth2"
+        }
+      },
+      "notes": "Upload le PDF du certificat de réalisation dans le sous-dossier 05_Certificats du dossier session sur Google Drive."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Préparer Certificat').item.json.inscrit_email }}",
+        "subject": "=Attestation et certificat de réalisation — {{ $('Préparer Certificat').item.json.formation_intitule }}",
+        "emailType": "html",
+        "message": "=<h2 style=\"color:#1a365d;\">Vos documents de formation</h2><p>Bonjour {{ $('Préparer Certificat').item.json.inscrit_prenom }},</p><p>Suite à votre participation à la formation <strong>{{ $('Préparer Certificat').item.json.formation_intitule }}</strong>, veuillez trouver ci-joints :</p><ul><li><strong>Attestation de formation</strong> — certifie votre participation et les compétences visées</li><li><strong>Certificat de réalisation</strong> — document obligatoire attestant de la réalisation de l'action de formation</li></ul><p>Ces documents sont conservés dans votre dossier de formation et peuvent être transmis à votre employeur ou financeur.</p><p>Cordialement,<br/>L'équipe pédagogique</p><p style=\"font-size:12px;color:#999;\">Email généré automatiquement — Système Qualiopi</p>",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              },
+              {
+                "property": "data1"
+              }
+            ]
+          }
+        }
+      },
+      "id": "send-attestation-certificat",
+      "name": "Envoyer attestation + certificat",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [4320, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "notes": "Envoie un email à l'inscrit avec les 2 PDF en pièces jointes : attestation de formation et certificat de réalisation."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLUiP42SWHjCJ_eNwttkNSaHy7B0aIrPlk7YdYtP72M",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Journal_Systeme",
+          "mode": "name"
+        },
+        "fieldsUi": {
+          "values": [
+            {
+              "column": "date",
+              "fieldValue": "={{ new Date().toLocaleDateString('fr-FR') }}"
+            },
+            {
+              "column": "heure",
+              "fieldValue": "={{ new Date().toLocaleTimeString('fr-FR') }}"
+            },
+            {
+              "column": "workflow",
+              "fieldValue": "W6"
+            },
+            {
+              "column": "session_id",
+              "fieldValue": "={{ $('Sessions éligibles').item.json.session_id }}"
+            },
+            {
+              "column": "statut",
+              "fieldValue": "OK"
+            },
+            {
+              "column": "details",
+              "fieldValue": "=Suivi à froid envoyé, attestations et certificats générés et envoyés aux inscrits"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-journal",
+      "name": "Log Journal",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [4560, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "notes": "Ajoute une ligne dans l'onglet Journal_Systeme du classeur 03_Qualite_KPIs : date, heure, workflow W6, session_id, statut OK."
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lire Sessions terminées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Sessions terminées": {
+      "main": [
+        [
+          {
+            "node": "Filtrer sessions à 6 mois",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrer sessions à 6 mois": {
+      "main": [
+        [
+          {
+            "node": "Sessions éligibles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sessions éligibles": {
+      "main": [
+        [
+          {
+            "node": "Lire Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Inscrits": {
+      "main": [
+        [
+          {
+            "node": "Lire Formation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Formation": {
+      "main": [
+        [
+          {
+            "node": "Lire Organisme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire Organisme": {
+      "main": [
+        [
+          {
+            "node": "Boucle Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boucle Inscrits": {
+      "main": [
+        [
+          {
+            "node": "Construire URL Suivi Froid",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire URL Suivi Froid": {
+      "main": [
+        [
+          {
+            "node": "Envoyer suivi froid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer suivi froid": {
+      "main": [
+        [
+          {
+            "node": "Log envoi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log envoi": {
+      "main": [
+        [
+          {
+            "node": "Préparer Attestation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Attestation": {
+      "main": [
+        [
+          {
+            "node": "Générer Attestation PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Générer Attestation PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload Attestation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Attestation": {
+      "main": [
+        [
+          {
+            "node": "Préparer Certificat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer Certificat": {
+      "main": [
+        [
+          {
+            "node": "Générer Certificat PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Générer Certificat PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload Certificat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Certificat": {
+      "main": [
+        [
+          {
+            "node": "Envoyer attestation + certificat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer attestation + certificat": {
+      "main": [
+        [
+          {
+            "node": "Boucle Inscrits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [{ "name": "Qualiopi", "id": "qualiopi-tag" }],
+  "triggerCount": 1,
+  "pinData": {}
+}
