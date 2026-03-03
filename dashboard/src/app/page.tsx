@@ -1,4 +1,12 @@
-import { getSessions, getInscriptions, getSatisfaction, getReclamations } from "@/lib/sheets";
+import {
+  getSessions,
+  getInscriptions,
+  getSatisfaction,
+  getReclamations,
+  getOrganisme,
+  getFormations,
+  getFormateurs,
+} from "@/lib/sheets";
 import { CalendarDays, Users, Star, Shield, AlertTriangle, Clock } from "lucide-react";
 import KPICard from "@/components/KPICard";
 import StatusBadge from "@/components/StatusBadge";
@@ -10,12 +18,16 @@ function normalizeStatus(s: string): string {
 }
 
 export default async function HomePage() {
-  const [sessions, inscriptions, satisfaction, reclamations] = await Promise.all([
-    getSessions(),
-    getInscriptions(),
-    getSatisfaction(),
-    getReclamations(),
-  ]);
+  const [sessions, inscriptions, satisfaction, reclamations, organisme, formations, formateurs] =
+    await Promise.all([
+      getSessions(),
+      getInscriptions(),
+      getSatisfaction(),
+      getReclamations(),
+      getOrganisme(),
+      getFormations(),
+      getFormateurs(),
+    ]);
 
   // KPIs
   const sessionsActives = sessions.filter(
@@ -32,28 +44,30 @@ export default async function HomePage() {
       ? (satNotes.reduce((a, b) => a + b, 0) / satNotes.length).toFixed(1)
       : "N/A";
 
-  // Score Qualiopi estimé
-  const hasOrg = true;
-  const hasFormations = sessions.length > 0;
-  const hasSatisfaction = satNotes.length > 0;
-  const hasInscriptions = inscriptions.length > 0;
-  const reclamationsTraitees =
-    reclamations.length > 0
-      ? reclamations.filter((r) => normalizeStatus(r.statut ?? "") === "traitee").length /
-        reclamations.length
-      : 1;
-  const scoreQualiopi = Math.min(
-    100,
-    Math.round(
-      (hasOrg ? 15 : 0) +
-        (hasFormations ? 15 : 0) +
-        (hasInscriptions ? 15 : 0) +
-        (hasSatisfaction ? 15 : 0) +
-        reclamationsTraitees * 15 +
-        (satNotes.length > 0 && parseFloat(satMoyenne) >= 3.5 ? 15 : 0) +
-        10
-    )
-  );
+  // Score Qualiopi — même calcul que la page Conformité (moyenne des 7 critères)
+  const orgFields = organisme[0] ?? {};
+  const orgFilled = Object.values(orgFields).filter((v) => v && v.trim() !== "").length;
+  const orgTotal = Math.max(1, Object.keys(orgFields).length);
+
+  const formCompletes = formations.filter(
+    (f) => f.intitule && f.objectifs && f.prerequis && f.duree_heures
+  ).length;
+
+  const positionFait = inscriptions.filter(
+    (i) => i.positionnement_fait === "TRUE" || i.positionnement_fait === "true"
+  ).length;
+
+  const formateursDossier = formateurs.filter(
+    (f) => f.dossier_complet === "TRUE" || f.dossier_complet === "true"
+  ).length;
+
+  const formateursQualif = formateurs.filter(
+    (f) => f.qualifications && f.qualifications.trim() !== ""
+  ).length;
+
+  const recTraitees = reclamations.filter(
+    (r) => ["traitee", "resolue", "cloturee"].includes(normalizeStatus(r.statut ?? ""))
+  ).length;
 
   // Satisfaction chart data — aggregate by month
   const satByMonth = new Map<string, { sum: number; count: number }>();
@@ -74,16 +88,24 @@ export default async function HomePage() {
       note: Math.round((sum / count) * 10) / 10,
     }));
 
-  // Critères Qualiopi
+  const satMoy = satNotes.length > 0
+    ? satNotes.reduce((a, b) => a + b, 0) / satNotes.length
+    : 0;
+
+  // Critères Qualiopi — identique à conformite/page.tsx
   const criteres = [
-    { num: 1, label: "Information", score: hasOrg ? 85 : 30 },
-    { num: 2, label: "Objectifs", score: hasFormations ? 80 : 20 },
-    { num: 3, label: "Adaptation", score: hasInscriptions ? 75 : 20 },
-    { num: 4, label: "Moyens", score: sessions.length > 0 ? 70 : 20 },
-    { num: 5, label: "Compétences", score: 65 },
-    { num: 6, label: "Engagement", score: Math.round(reclamationsTraitees * 100) },
-    { num: 7, label: "Amélioration", score: hasSatisfaction ? Math.min(100, Math.round(parseFloat(satMoyenne || "0") * 20)) : 20 },
+    { num: 1, label: "Information", score: Math.round((orgFilled / orgTotal) * 100) },
+    { num: 2, label: "Objectifs", score: formations.length > 0 ? Math.round((formCompletes / formations.length) * 100) : 0 },
+    { num: 3, label: "Adaptation", score: inscriptions.length > 0 ? Math.round((positionFait / inscriptions.length) * 100) : 0 },
+    { num: 4, label: "Moyens", score: formateurs.length > 0 ? Math.round((formateursDossier / formateurs.length) * 100) : 0 },
+    { num: 5, label: "Compétences", score: formateurs.length > 0 ? Math.round((formateursQualif / formateurs.length) * 100) : 0 },
+    { num: 6, label: "Engagement", score: reclamations.length > 0 ? Math.round((recTraitees / reclamations.length) * 100) : 100 },
+    { num: 7, label: "Amélioration", score: satNotes.length > 0 ? Math.min(100, Math.round(satMoy * 20)) : 0 },
   ];
+
+  const scoreQualiopi = Math.round(
+    criteres.reduce((sum, c) => sum + c.score, 0) / criteres.length
+  );
 
   // Recent sessions (last 4)
   const recentSessions = sessions.slice(-4).reverse();
@@ -147,10 +169,10 @@ export default async function HomePage() {
         <KPICard
           label="Satisfaction moyenne"
           value={satMoyenne}
-          suffix="/5"
+          suffix="/10"
           icon={Star}
           accent="#f59e0b"
-          trend={satNotes.length > 0 ? { direction: parseFloat(satMoyenne) >= 3.5 ? "up" : "down", value: `${satNotes.length} réponses` } : undefined}
+          trend={satNotes.length > 0 ? { direction: parseFloat(satMoyenne) >= 7 ? "up" : "down", value: `${satNotes.length} réponses` } : undefined}
         />
         <KPICard
           label="Score Qualiopi"

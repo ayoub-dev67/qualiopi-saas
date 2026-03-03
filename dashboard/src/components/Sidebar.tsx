@@ -20,7 +20,12 @@ const NAV_ITEMS = [
   { href: "/alertes", label: "Alertes", icon: Bell },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  orgName?: string;
+  orgNda?: string;
+}
+
+export default function Sidebar({ orgName, orgNda }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -63,8 +68,12 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="px-5 py-4 border-t border-[#1e293b]">
-        <p className="text-xs text-gray-400 font-medium">Centre Formation Test</p>
-        <p className="text-[11px] text-gray-600 mt-0.5">NDA : 11755555555</p>
+        <p className="text-xs text-gray-400 font-medium">
+          {orgName || "Centre Formation"}
+        </p>
+        {orgNda && (
+          <p className="text-[11px] text-gray-600 mt-0.5">NDA : {orgNda}</p>
+        )}
       </div>
     </aside>
   );

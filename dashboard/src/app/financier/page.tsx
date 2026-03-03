@@ -27,7 +27,7 @@ export default async function FinancierPage() {
       <div className="animate-fade-in flex items-center justify-center h-64">
         <div className="text-center">
           <DollarSign size={40} className="text-[#1e293b] mx-auto mb-3" />
-          <p className="text-sm text-[#64748b]">Aucune donnée financière disponible</p>
+          <p className="text-sm text-[#64748b]">Aucune donnée financière pour le moment</p>
         </div>
       </div>
     );

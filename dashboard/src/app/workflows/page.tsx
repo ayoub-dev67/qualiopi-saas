@@ -10,13 +10,13 @@ interface WorkflowDef {
 }
 
 const WORKFLOWS: WorkflowDef[] = [
-  { id: "WF0", name: "Tally → Inscription", description: "Webhook Tally, création apprenant et inscription automatique" },
-  { id: "WF1", name: "Génération PDF", description: "Convention, convocation, attestation via Gotenberg" },
-  { id: "WF2", name: "Envoi Positionnement", description: "Questionnaire de positionnement pré-formation" },
-  { id: "WF3", name: "Satisfaction & Évaluation", description: "Envoi questionnaires satisfaction et évaluation post-session" },
-  { id: "WF4", name: "Relances automatiques", description: "Relances par email pour documents non retournés" },
-  { id: "WF5", name: "Alertes Réclamation", description: "Notification et suivi des réclamations apprenants" },
-  { id: "WF6", name: "Archivage Drive", description: "Archivage automatique des documents dans Google Drive" },
+  { id: "WF0", name: "Setup Session", description: "Dossiers Drive, Convention PDF, Convocations email" },
+  { id: "WF1", name: "Positionnement", description: "Envoi liens positionnement pré-formation" },
+  { id: "WF2", name: "Émargement", description: "Feuilles de présence, émargement digital" },
+  { id: "WF3", name: "Satisfaction & Évaluation", description: "Questionnaires satisfaction + évaluation post-session" },
+  { id: "WF4", name: "Amélioration Continue", description: "Réclamations, KPIs hebdo, rapport qualité" },
+  { id: "WF5", name: "Relances", description: "Relances automatiques multi-niveaux par email" },
+  { id: "WF6", name: "Suivi à Froid", description: "Attestations, certificats, suivi 6 mois post-formation" },
 ];
 
 function normalizeStatus(s: string): string {
@@ -35,19 +35,21 @@ export default async function WorkflowsPage() {
     (s) => ["en_cours", "planifiee"].includes(normalizeStatus(s.statut ?? ""))
   );
 
+  function isTrue(v: string | undefined): boolean {
+    return v === "TRUE" || v === "true";
+  }
+
   function getWfStats(colIndex: number) {
-    if (colIndex >= wfColumns.length) return { done: 0, total: 0 };
+    if (colIndex >= wfColumns.length) return { done: 0, total: 0, activeMissing: 0 };
     const col = wfColumns[colIndex];
-    const done = sessionsActives.filter(
-      (s) => s[col] === "TRUE" || s[col] === "true"
-    ).length;
-    return { done, total: sessionsActives.length };
+    const done = sessions.filter((s) => isTrue(s[col])).length;
+    const activeMissing = sessionsActives.filter((s) => !isTrue(s[col])).length;
+    return { done, total: sessions.length, activeMissing };
   }
 
   // Build workflow status info
   const workflowData = WORKFLOWS.map((wf, i) => {
     const stats = getWfStats(i);
-    let status: string;
     let lastExec = "—";
     let execCount = 0;
     let errorCount = 0;
@@ -66,21 +68,24 @@ export default async function WorkflowsPage() {
       lastExec = last.date ?? last.timestamp ?? "—";
     }
 
-    // Determine status
-    if (stats.total === 0 && execCount === 0) {
-      status = "inactive";
-    } else if (errorCount > 0) {
-      status = "error";
-    } else if (stats.total > 0 && stats.done < stats.total) {
-      status = "warning";
+    // Determine status from session columns (WF0-WF3)
+    let status: string;
+    if (i < wfColumns.length) {
+      if (stats.activeMissing > 0) {
+        status = "warning";
+      } else if (stats.done > 0) {
+        status = "ok";
+      } else {
+        status = "inactive";
+      }
     } else {
-      status = "ok";
-    }
-
-    // For WF4-WF6 without direct session columns, use journal or default
-    if (i >= 4) {
+      // WF4-WF6: use journal data
       if (execCount === 0) {
-        status = journalEntries.length > 0 ? (errorCount > 0 ? "error" : "ok") : "inactive";
+        status = "inactive";
+      } else if (errorCount > 0) {
+        status = "error";
+      } else {
+        status = "ok";
       }
     }
 
