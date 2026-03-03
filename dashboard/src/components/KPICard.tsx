@@ -7,48 +7,60 @@ interface KPICardProps {
   trend?: { direction: "up" | "down"; value: string };
   icon: LucideIcon;
   accent?: string;
+  delay?: number;
+  sparkline?: number[];
+}
+
+function MiniSparkline({ data, color }: { data: number[]; color: string }) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const w = 48;
+  const h = 20;
+  const pts = data
+    .map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`)
+    .join(" ");
+  return (
+    <svg width={w} height={h} className="inline-block ml-1.5">
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export default function KPICard({
-  label,
-  value,
-  suffix,
-  trend,
-  icon: Icon,
-  accent = "#6366f1",
+  label, value, suffix, trend, icon: Icon, accent = "#6366f1", delay = 0, sparkline,
 }: KPICardProps) {
   return (
-    <div className="relative overflow-hidden bg-[#111827] border border-[#1e293b] rounded-2xl p-6 hover:border-[#2d3a4f] transition-all">
-      {/* Decorative circle */}
-      <div
-        className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.07]"
-        style={{ background: accent }}
-      />
+    <div
+      className="glass-card relative overflow-hidden p-6 animate-fade-in-up"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      {/* Glow */}
+      <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.08]" style={{ background: accent }} />
 
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between relative">
         <div>
-          <p className="text-sm text-[#94a3b8] mb-1">{label}</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-[#f1f5f9]">{value}</span>
-            {suffix && (
-              <span className="text-sm text-[#64748b]">{suffix}</span>
-            )}
+          <p className="text-sm text-[var(--text-secondary)] mb-2">{label}</p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[40px] font-extrabold text-[var(--text-primary)] leading-none tracking-[-2px]">
+              {value}
+            </span>
+            {suffix && <span className="text-base text-[var(--text-dim)] font-medium">{suffix}</span>}
           </div>
           {trend && (
-            <p
-              className={`text-xs mt-2 font-medium ${
-                trend.direction === "up"
-                  ? "text-emerald-400"
-                  : "text-red-400"
-              }`}
-            >
-              {trend.direction === "up" ? "↑" : "↓"} {trend.value}
-            </p>
+            <div className="flex items-center mt-2">
+              <span className={`text-xs font-medium ${trend.direction === "up" ? "text-emerald-400" : "text-red-400"}`}>
+                {trend.direction === "up" ? "↑" : "↓"} {trend.value}
+              </span>
+              {sparkline && <MiniSparkline data={sparkline} color={trend.direction === "up" ? "#10b981" : "#ef4444"} />}
+            </div>
           )}
         </div>
+        {/* Icon circle with glassmorphism */}
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: `${accent}18` }}
+          className="w-11 h-11 rounded-xl flex items-center justify-center backdrop-blur-sm"
+          style={{ background: `${accent}15`, border: `1px solid ${accent}25` }}
         >
           <Icon size={20} style={{ color: accent }} />
         </div>

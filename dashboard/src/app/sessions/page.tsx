@@ -1,5 +1,5 @@
 import { getSessions, getFormations, getFormateurs } from "@/lib/sheets";
-import { CalendarDays, PlayCircle, CheckCircle2, XCircle } from "lucide-react";
+import { CalendarDays, PlayCircle, CheckCircle2, XCircle, Search } from "lucide-react";
 import KPICard from "@/components/KPICard";
 import StatusBadge from "@/components/StatusBadge";
 import WorkflowDot from "@/components/WorkflowDot";
@@ -7,6 +7,14 @@ import DataTable from "@/components/DataTable";
 
 function normalizeStatus(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
+}
+
+function fmtDate(d: string): string {
+  if (d.length >= 10) {
+    const parts = d.substring(0, 10).split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
+  }
+  return d || "—";
 }
 
 export default async function SessionsPage() {
@@ -41,15 +49,15 @@ export default async function SessionsPage() {
       <span key="f" className="text-sm">{formationMap.get(s.formation_id) ?? s.formation_id}</span>,
       // Formateur
       <span key="fm" className="text-sm">{formateurMap.get(s.formateur_id) ?? s.formateur_id}</span>,
-      // Dates
+      // Dates (DD/MM format)
       <span key="d" className="text-xs whitespace-nowrap">
-        {s.date_debut || "—"}{s.date_fin ? ` → ${s.date_fin}` : ""}
+        {fmtDate(s.date_debut ?? "")}{s.date_fin ? ` → ${fmtDate(s.date_fin)}` : ""}
       </span>,
       // Lieu
       <span key="l" className="text-xs">{s.lieu || "—"}</span>,
       // Inscrits (progress bar)
       <div key="ins" className="flex items-center gap-2 min-w-[100px]">
-        <div className="flex-1 h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-[var(--border-subtle)] rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{
@@ -58,7 +66,7 @@ export default async function SessionsPage() {
             }}
           />
         </div>
-        <span className="text-[11px] text-[#64748b] font-mono whitespace-nowrap">
+        <span className="text-[11px] text-[var(--text-dim)] font-mono whitespace-nowrap">
           {nbInscrits}/{nbPlaces}
         </span>
       </div>,
@@ -75,19 +83,44 @@ export default async function SessionsPage() {
   });
 
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* Mini KPI cards */}
+    <div className="space-y-6">
+      {/* Mini KPI cards with stagger */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <KPICard label="Planifiées" value={counts.planifiee} icon={CalendarDays} accent="#a5b4fc" />
-        <KPICard label="En cours" value={counts.en_cours} icon={PlayCircle} accent="#10b981" />
-        <KPICard label="Terminées" value={counts.terminee} icon={CheckCircle2} accent="#94a3b8" />
-        <KPICard label="Annulées" value={counts.annulee} icon={XCircle} accent="#ef4444" />
+        <KPICard label="Planifiées" value={counts.planifiee} icon={CalendarDays} accent="#a5b4fc" delay={0} />
+        <KPICard label="En cours" value={counts.en_cours} icon={PlayCircle} accent="#10b981" delay={80} />
+        <KPICard label="Terminées" value={counts.terminee} icon={CheckCircle2} accent="#94a3b8" delay={160} />
+        <KPICard label="Annulées" value={counts.annulee} icon={XCircle} accent="#ef4444" delay={240} />
+      </div>
+
+      {/* Search / filter bar (cosmetic) */}
+      <div className="glass-card p-4 flex items-center gap-4">
+        <div className="flex items-center gap-2 flex-1 bg-white/[0.03] border border-[var(--border-subtle)] rounded-xl px-4 py-2.5">
+          <Search size={16} className="text-[var(--text-dim)]" />
+          <span className="text-sm text-[var(--text-dim)]">Rechercher une session...</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {["Toutes", "Planifiées", "En cours", "Terminées"].map((f) => (
+            <span
+              key={f}
+              className={`text-xs px-3 py-1.5 rounded-lg transition-colors cursor-default ${
+                f === "Toutes"
+                  ? "bg-[var(--accent)]/15 text-[var(--accent)] font-medium"
+                  : "text-[var(--text-dim)] hover:text-[var(--text-secondary)] hover:bg-white/[0.03]"
+              }`}
+            >
+              {f}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Data Table */}
       <DataTable
         headers={["Session", "Formation", "Formateur", "Dates", "Lieu", "Inscrits", "Statut", "WF"]}
         rows={tableRows}
+        emptyIcon={CalendarDays}
+        emptyTitle="Aucune session enregistrée"
+        emptyDescription="Créez votre première session de formation pour commencer le suivi"
       />
     </div>
   );

@@ -5,7 +5,6 @@ const SHEET_03 = process.env.SHEET_03_ID!;
 
 async function fetchSheet(sheetId: string, tabName: string): Promise<Record<string, string>[]> {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabName)}?key=${API_KEY}`;
-
   const res = await fetch(url, { next: { revalidate: 30 } });
 
   if (!res.ok) {
@@ -15,23 +14,21 @@ async function fetchSheet(sheetId: string, tabName: string): Promise<Record<stri
 
   const data = await res.json();
   const rows: string[][] = data.values ?? [];
-
   if (rows.length < 2) return [];
-
-  const INVALID = ["#ERROR!", "#REF!", "Formula parse error"];
 
   const headers = rows[0];
   return rows.slice(1)
     .map((row) => {
       const obj: Record<string, string> = {};
-      headers.forEach((header, i) => {
-        obj[header] = row[i] ?? "";
-      });
+      headers.forEach((h, i) => { obj[h] = row[i] ?? ""; });
       return obj;
     })
     .filter((obj) => {
-      const first = obj[headers[0]] ?? "";
-      return first.trim() !== "" && !INVALID.includes(first);
+      const first = (obj[headers[0]] ?? "").trim();
+      if (first === "") return false;
+      if (first.startsWith("#")) return false;
+      if (first === "Formula parse error") return false;
+      return true;
     });
 }
 
@@ -46,9 +43,10 @@ export const getFinancier  = () => fetchSheet(SHEET_01, "Financier");
 // Sheet 02 - Suivi Apprenants
 export const getInscriptions = () => fetchSheet(SHEET_02, "Inscriptions");
 export const getApprenants   = () => fetchSheet(SHEET_02, "Apprenants");
-export const getSatisfaction = () => fetchSheet(SHEET_02, "Satisfaction");
-export const getReclamations = () => fetchSheet(SHEET_02, "Reclamations");
 
 // Sheet 03 - Qualité & KPIs
-export const getKPIs    = () => fetchSheet(SHEET_03, "KPIs");
-export const getJournal = () => fetchSheet(SHEET_03, "Journal_Systeme");
+export const getSatisfaction = () => fetchSheet(SHEET_03, "Satisfaction");
+export const getReclamations = () => fetchSheet(SHEET_03, "Réclamations");
+export const getKPIs         = () => fetchSheet(SHEET_03, "KPIs");
+export const getJournal      = () => fetchSheet(SHEET_03, "Journal_Systeme");
+export const getSuiviFroid   = () => fetchSheet(SHEET_03, "Suivi_Froid");

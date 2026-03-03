@@ -1,29 +1,34 @@
 import { type ReactNode } from "react";
+import { type LucideIcon } from "lucide-react";
 
 interface DataTableProps {
   headers: string[];
   rows: ReactNode[][];
+  emptyIcon?: LucideIcon;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
-export default function DataTable({ headers, rows }: DataTableProps) {
+export default function DataTable({
+  headers, rows, emptyIcon: EmptyIcon, emptyTitle, emptyDescription,
+}: DataTableProps) {
   if (rows.length === 0) {
     return (
-      <div className="bg-[#111827] border border-[#1e293b] rounded-2xl p-12 text-center">
-        <p className="text-sm text-[#64748b]">Aucune donnée disponible</p>
+      <div className="glass-card p-12 flex flex-col items-center text-center">
+        {EmptyIcon && <EmptyIcon size={48} className="text-[var(--text-dim)] mb-4" />}
+        <p className="text-sm text-[var(--text-secondary)]">{emptyTitle ?? "Aucune donnée"}</p>
+        {emptyDescription && <p className="text-xs text-[var(--text-dim)] mt-1 max-w-xs">{emptyDescription}</p>}
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-[#1e293b] bg-[#111827]">
+    <div className="overflow-x-auto glass-card">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[#1e293b]">
+          <tr className="border-b border-[var(--border-subtle)]">
             {headers.map((h) => (
-              <th
-                key={h}
-                className="text-left px-5 py-3.5 text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap"
-              >
+              <th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wider whitespace-nowrap">
                 {h}
               </th>
             ))}
@@ -31,14 +36,9 @@ export default function DataTable({ headers, rows }: DataTableProps) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr
-              key={i}
-              className="border-b border-[#1e293b]/50 hover:bg-white/[0.02] transition-colors"
-            >
+            <tr key={i} className="border-b border-[var(--border-subtle)]/50 hover:bg-[var(--bg-card-hover)] transition-colors">
               {row.map((cell, j) => (
-                <td key={j} className="px-5 py-3.5 text-[#c8d1dc]">
-                  {cell}
-                </td>
+                <td key={j} className="px-5 py-3.5 text-[var(--text-secondary)]">{cell}</td>
               ))}
             </tr>
           ))}

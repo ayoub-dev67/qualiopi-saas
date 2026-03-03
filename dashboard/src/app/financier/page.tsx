@@ -1,8 +1,7 @@
 import { getFinancier } from "@/lib/sheets";
-import { DollarSign, Receipt, TrendingUp } from "lucide-react";
+import { DollarSign, Receipt, TrendingUp, FileText } from "lucide-react";
 import KPICard from "@/components/KPICard";
 import DataTable from "@/components/DataTable";
-import StatusBadge from "@/components/StatusBadge";
 import FinancierChart from "@/components/charts/FinancierChart";
 
 const PAIEMENT_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -24,10 +23,20 @@ export default async function FinancierPage() {
 
   if (financier.length === 0) {
     return (
-      <div className="animate-fade-in flex items-center justify-center h-64">
-        <div className="text-center">
-          <DollarSign size={40} className="text-[#1e293b] mx-auto mb-3" />
-          <p className="text-sm text-[#64748b]">Aucune donnée financière pour le moment</p>
+      <div className="space-y-6">
+        <div className="glass-card p-12 flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-2xl bg-[var(--accent)]/10 flex items-center justify-center mb-5">
+            <FileText size={32} className="text-[var(--accent)]" />
+          </div>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Aucune donnée financière</h3>
+          <p className="text-sm text-[var(--text-secondary)] max-w-md mb-4">
+            Les données financières apparaîtront ici une fois vos premières factures enregistrées dans l&apos;onglet Financier du classeur 01_Referentiel.
+          </p>
+          <div className="text-xs text-[var(--text-dim)] space-y-1">
+            <p>1. Ouvrez le classeur 01_Referentiel_Qualiopi</p>
+            <p>2. Accédez à l&apos;onglet &quot;Financier&quot;</p>
+            <p>3. Ajoutez vos factures avec les montants prévus, facturés et encaissés</p>
+          </div>
         </div>
       </div>
     );
@@ -99,8 +108,8 @@ export default async function FinancierPage() {
   });
 
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* KPIs */}
+    <div className="space-y-6">
+      {/* KPIs with stagger */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <KPICard
           label="CA Encaissé"
@@ -108,6 +117,7 @@ export default async function FinancierPage() {
           suffix="€"
           icon={DollarSign}
           accent="#10b981"
+          delay={0}
           trend={totalPrevu > 0 ? { direction: "up", value: `${Math.round((totalEncaisse / totalPrevu) * 100)}% du prévu` } : undefined}
         />
         <KPICard
@@ -115,6 +125,7 @@ export default async function FinancierPage() {
           value={enAttente}
           icon={Receipt}
           accent="#f59e0b"
+          delay={80}
         />
         <KPICard
           label="Taux d'encaissement"
@@ -122,6 +133,7 @@ export default async function FinancierPage() {
           suffix="%"
           icon={TrendingUp}
           accent="#6366f1"
+          delay={160}
           trend={tauxEncaissement >= 80 ? { direction: "up", value: "Bon" } : { direction: "down", value: "À surveiller" }}
         />
       </div>
@@ -133,6 +145,9 @@ export default async function FinancierPage() {
       <DataTable
         headers={["Facture", "Session", "Entreprise", "Financement", "Prévu", "Facturé", "Encaissé", "Statut"]}
         rows={tableRows}
+        emptyIcon={Receipt}
+        emptyTitle="Aucune facture"
+        emptyDescription="Les factures apparaîtront ici après ajout dans le classeur Financier"
       />
     </div>
   );

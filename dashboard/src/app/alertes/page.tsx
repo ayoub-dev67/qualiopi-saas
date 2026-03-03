@@ -4,12 +4,17 @@ import {
   getReclamations,
   getInscriptions,
   getSatisfaction,
+  getSuiviFroid,
 } from "@/lib/sheets";
 import { AlertTriangle, AlertOctagon, Info, CheckCircle2 } from "lucide-react";
 import KPICard from "@/components/KPICard";
 
 function normalizeStatus(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
+}
+
+function isTrue(v: string | undefined): boolean {
+  return v === "TRUE" || v === "true";
 }
 
 type AlertLevel = "danger" | "warning" | "info";
@@ -21,44 +26,78 @@ interface Alert {
   timestamp: string;
 }
 
+function daysBetween(dateStr: string, now: Date): number {
+  if (!dateStr || dateStr.length < 10) return Infinity;
+  const d = new Date(dateStr.substring(0, 10));
+  if (isNaN(d.getTime())) return Infinity;
+  return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export default async function AlertesPage() {
-  const [sessions, formateurs, reclamations, inscriptions, satisfaction] =
+  const [sessions, formateurs, reclamations, inscriptions, satisfaction, suiviFroid] =
     await Promise.all([
       getSessions(),
       getFormateurs(),
       getReclamations(),
       getInscriptions(),
       getSatisfaction(),
+      getSuiviFroid(),
     ]);
 
+  const now = new Date();
   const alertes: Alert[] = [];
 
-  // DANGER — sessions en cours avec workflows incomplets
-  const sessionsEnCours = sessions.filter(
-    (s) => normalizeStatus(s.statut ?? "") === "en_cours"
+  // DANGER — Session planifiée avec date_debut dans moins de 3 jours et workflow_0_ok=false
+  const sessionsPlanifiees = sessions.filter(
+    (s) => normalizeStatus(s.statut ?? "") === "planifiee"
   );
-  for (const s of sessionsEnCours) {
-    const wfs = [
-      { col: "workflow_0_ok", name: "Convention" },
-      { col: "workflow_1_ok", name: "Convocation" },
-      { col: "workflow_2_ok", name: "Positionnement" },
-      { col: "workflow_3_ok", name: "Satisfaction" },
-    ];
-    for (const wf of wfs) {
-      if (s[wf.col] !== "TRUE" && s[wf.col] !== "true") {
+  for (const s of sessionsPlanifiees) {
+    if (!isTrue(s.workflow_0_ok) && s.date_debut) {
+      const daysUntil = -daysBetween(s.date_debut, now); // negative = future
+      if (daysUntil >= 0 && daysUntil <= 3) {
         alertes.push({
           level: "danger",
-          message: `Session ${s.session_id} : ${wf.name} non exécuté`,
-          source: "Workflows",
-          timestamp: s.date_debut || "—",
+          message: `Session ${s.session_id} commence dans ${daysUntil === 0 ? "aujourd'hui" : `${daysUntil}j`} — setup non effectué (WF0)`,
+          source: "Sessions",
+          timestamp: s.date_debut,
         });
       }
     }
   }
 
-  // DANGER — formateurs sans dossier complet
+  // DANGER — Sessions en cours avec workflows incomplets
+  const sessionsEnCours = sessions.filter(
+    (s) => normalizeStatus(s.statut ?? "") === "en_cours"
+  );
+  for (const s of sessionsEnCours) {
+    if (!isTrue(s.workflow_2_ok)) {
+      alertes.push({
+        level: "danger",
+        message: `Session ${s.session_id} en cours : émargement non lancé (WF2)`,
+        source: "Workflows",
+        timestamp: s.date_debut || "—",
+      });
+    }
+  }
+
+  // DANGER — Sessions terminées avec WF3 incomplet
+  const sessionsTerminees = sessions.filter(
+    (s) => normalizeStatus(s.statut ?? "") === "terminee"
+  );
+  for (const s of sessionsTerminees) {
+    if (!isTrue(s.workflow_3_ok)) {
+      alertes.push({
+        level: "danger",
+        message: `Session ${s.session_id} terminée : satisfaction/évaluation non envoyée (WF3)`,
+        source: "Workflows",
+        timestamp: s.date_fin || s.date_debut || "—",
+      });
+    }
+  }
+
+  // DANGER — Formateurs sans dossier complet
   const formateursIncomplets = formateurs.filter(
-    (f) => f.dossier_complet !== "TRUE" && f.dossier_complet !== "true"
+    (f) => !isTrue(f.dossier_complet)
   );
   for (const f of formateursIncomplets) {
     alertes.push({
@@ -69,7 +108,7 @@ export default async function AlertesPage() {
     });
   }
 
-  // WARNING — réclamations non traitées
+  // WARNING — Réclamations non traitées
   const recNonTraitees = reclamations.filter(
     (r) =>
       !["traitee", "resolue", "cloturee"].includes(normalizeStatus(r.statut ?? ""))
@@ -83,10 +122,10 @@ export default async function AlertesPage() {
     });
   }
 
-  // WARNING — relances en attente (inscriptions sans satisfaction)
+  // WARNING — Relances: inscriptions sans retour satisfaction
   const inscrSansSat = inscriptions.filter(
     (i) =>
-      (i.satisfaction_repondue !== "TRUE" && i.satisfaction_repondue !== "true") &&
+      !isTrue(i.satisfaction_repondue) &&
       i.statut &&
       normalizeStatus(i.statut) !== "annulee"
   );
@@ -99,22 +138,26 @@ export default async function AlertesPage() {
     });
   }
 
-  // INFO — suivi froid éligible
-  const suiviFroidEligible = inscriptions.filter(
-    (i) =>
-      (i.suivi_froid_envoye !== "TRUE" && i.suivi_froid_envoye !== "true") &&
-      (i.attestation_generee === "TRUE" || i.attestation_generee === "true")
+  // INFO — Suivi froid éligible (sessions terminées depuis plus de 150 jours)
+  const suiviFroidEnvoyes = new Set(
+    suiviFroid.map((sf) => sf.session_id).filter(Boolean)
   );
-  if (suiviFroidEligible.length > 0) {
+  const eligibleSuiviFroid = sessionsTerminees.filter((s) => {
+    if (suiviFroidEnvoyes.has(s.session_id)) return false;
+    const d = s.date_fin || s.date_debut || "";
+    const days = daysBetween(d, now);
+    return days >= 150;
+  });
+  if (eligibleSuiviFroid.length > 0) {
     alertes.push({
       level: "info",
-      message: `${suiviFroidEligible.length} apprenants éligibles au suivi à froid`,
+      message: `${eligibleSuiviFroid.length} session(s) éligible(s) au suivi à froid (>150 jours post-formation)`,
       source: "Suivi froid",
       timestamp: "—",
     });
   }
 
-  // INFO — satisfaction
+  // INFO — Satisfaction moyenne
   const satNotes = satisfaction
     .map((s) => parseFloat(s.note_globale))
     .filter((n) => !isNaN(n));
@@ -122,7 +165,7 @@ export default async function AlertesPage() {
     const moy = (satNotes.reduce((a, b) => a + b, 0) / satNotes.length).toFixed(1);
     alertes.push({
       level: "info",
-      message: `Satisfaction moyenne : ${moy}/5 sur ${satNotes.length} réponses`,
+      message: `Satisfaction moyenne : ${moy}/10 sur ${satNotes.length} réponses`,
       source: "KPIs",
       timestamp: "—",
     });
@@ -146,20 +189,21 @@ export default async function AlertesPage() {
   });
 
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* Mini KPI cards */}
+    <div className="space-y-6">
+      {/* Mini KPI cards with stagger */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <KPICard label="Critiques" value={nbDanger} icon={AlertOctagon} accent="#ef4444" />
-        <KPICard label="Avertissements" value={nbWarning} icon={AlertTriangle} accent="#f59e0b" />
-        <KPICard label="Informations" value={nbInfo} icon={Info} accent="#3b82f6" />
+        <KPICard label="Critiques" value={nbDanger} icon={AlertOctagon} accent="#ef4444" delay={0} />
+        <KPICard label="Avertissements" value={nbWarning} icon={AlertTriangle} accent="#f59e0b" delay={80} />
+        <KPICard label="Informations" value={nbInfo} icon={Info} accent="#3b82f6" delay={160} />
       </div>
 
       {/* Alerts list */}
-      <div className="bg-[#111827] border border-[#1e293b] rounded-2xl p-6">
+      <div className="glass-card p-6">
         {sorted.length === 0 ? (
           <div className="flex flex-col items-center py-12">
-            <CheckCircle2 size={40} className="text-emerald-500 mb-3" />
-            <p className="text-sm text-[#94a3b8]">Aucune alerte active</p>
+            <CheckCircle2 size={48} className="text-emerald-500 mb-4" />
+            <p className="text-sm text-[var(--text-secondary)]">Aucune alerte active</p>
+            <p className="text-xs text-[var(--text-dim)] mt-1">Tout est en ordre — aucun problème détecté</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -177,17 +221,14 @@ export default async function AlertesPage() {
                 >
                   <Icon size={16} className={`${conf.iconClass} mt-0.5 shrink-0`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#e2e8f0] leading-relaxed">{a.message}</p>
+                    <p className="text-sm text-[var(--text-primary)] leading-relaxed">{a.message}</p>
                     <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-[11px] text-[#64748b]">{a.source}</span>
+                      <span className="text-[11px] text-[var(--text-dim)]">{a.source}</span>
                       {a.timestamp !== "—" && (
-                        <span className="text-[11px] text-[#475569] font-mono">{a.timestamp}</span>
+                        <span className="text-[11px] text-[var(--text-dim)] font-mono">{a.timestamp}</span>
                       )}
                     </div>
                   </div>
-                  <button className="shrink-0 px-3 py-1.5 text-[11px] font-medium text-[#94a3b8] bg-white/5 hover:bg-white/10 rounded-lg border border-[#1e293b] transition-colors whitespace-nowrap">
-                    Traiter
-                  </button>
                 </div>
               );
             })}

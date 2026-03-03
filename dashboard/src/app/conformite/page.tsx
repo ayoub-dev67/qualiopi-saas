@@ -15,7 +15,7 @@ function normalizeStatus(s: string): string {
 interface Critere {
   num: number;
   titre: string;
-  indicateurs: string;
+  indicateurs: string[];
   score: number;
   details: string;
 }
@@ -64,18 +64,21 @@ export default async function ConformitePage() {
       ? satNotes.reduce((a, b) => a + b, 0) / satNotes.length
       : 0;
 
+  // C7 scoring: /10 scale — 100% at >=7/10, proportional below
+  const c7Score = satNotes.length > 0 ? Math.min(100, Math.round((satMoy / 7) * 100)) : 0;
+
   const criteres: Critere[] = [
     {
       num: 1,
       titre: "Information du public",
-      indicateurs: "Ind. 1-3",
+      indicateurs: ["Ind.1", "Ind.2", "Ind.3"],
       score: Math.round((orgFilled / orgTotal) * 100),
       details: `${orgFilled}/${orgTotal} champs renseignés`,
     },
     {
       num: 2,
       titre: "Objectifs des prestations",
-      indicateurs: "Ind. 4-8",
+      indicateurs: ["Ind.4", "Ind.5", "Ind.6", "Ind.7", "Ind.8"],
       score:
         formations.length > 0
           ? Math.round((formCompletes / formations.length) * 100)
@@ -85,7 +88,7 @@ export default async function ConformitePage() {
     {
       num: 3,
       titre: "Adaptation aux bénéficiaires",
-      indicateurs: "Ind. 9-16",
+      indicateurs: ["Ind.9", "Ind.10", "Ind.11", "Ind.12", "Ind.13", "Ind.14", "Ind.15", "Ind.16"],
       score:
         inscriptions.length > 0
           ? Math.round((positionFait / inscriptions.length) * 100)
@@ -95,7 +98,7 @@ export default async function ConformitePage() {
     {
       num: 4,
       titre: "Moyens pédagogiques",
-      indicateurs: "Ind. 17-21",
+      indicateurs: ["Ind.17", "Ind.18", "Ind.19", "Ind.20", "Ind.21"],
       score:
         formateurs.length > 0
           ? Math.round((formateursDossier / formateurs.length) * 100)
@@ -105,7 +108,7 @@ export default async function ConformitePage() {
     {
       num: 5,
       titre: "Compétences des formateurs",
-      indicateurs: "Ind. 22-26",
+      indicateurs: ["Ind.22", "Ind.23", "Ind.24", "Ind.25", "Ind.26"],
       score:
         formateurs.length > 0
           ? Math.round((formateursQualif / formateurs.length) * 100)
@@ -115,7 +118,7 @@ export default async function ConformitePage() {
     {
       num: 6,
       titre: "Engagement dans l'environnement",
-      indicateurs: "Ind. 27-29",
+      indicateurs: ["Ind.27", "Ind.28", "Ind.29"],
       score:
         reclamations.length > 0
           ? Math.round((recTraitees / reclamations.length) * 100)
@@ -128,11 +131,11 @@ export default async function ConformitePage() {
     {
       num: 7,
       titre: "Amélioration continue",
-      indicateurs: "Ind. 30-32",
-      score: satNotes.length > 0 ? Math.min(100, Math.round(satMoy * 20)) : 0,
+      indicateurs: ["Ind.30", "Ind.31", "Ind.32"],
+      score: c7Score,
       details:
         satNotes.length > 0
-          ? `Satisfaction ${satMoy.toFixed(1)}/5 (${satNotes.length} réponses)`
+          ? `Satisfaction ${satMoy.toFixed(1)}/10 (${satNotes.length} réponses)`
           : "Pas de données satisfaction",
     },
   ];
@@ -160,10 +163,10 @@ export default async function ConformitePage() {
   }
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="space-y-6">
       {/* Score global */}
-      <div className="bg-[#111827] border border-[#1e293b] rounded-2xl p-8 flex flex-col items-center">
-        <h3 className="text-sm font-medium text-[#94a3b8] mb-6">
+      <div className="glass-card p-8 flex flex-col items-center">
+        <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-6">
           Score de conformité global
         </h3>
         <ProgressRing
@@ -172,7 +175,7 @@ export default async function ConformitePage() {
           strokeWidth={12}
           color={ringColor(globalScore)}
         />
-        <p className="mt-4 text-xs text-[#64748b]">
+        <p className="mt-4 text-xs text-[var(--text-dim)]">
           Basé sur {criteres.length} critères &middot;{" "}
           {criteres.filter((c) => c.score >= 80).length} conformes
         </p>
@@ -185,11 +188,11 @@ export default async function ConformitePage() {
           return (
             <div
               key={c.num}
-              className="bg-[#111827] border border-[#1e293b] rounded-2xl p-6 hover:border-[#2d3a4f] transition-all"
+              className="glass-card p-6 hover:border-[var(--accent)]/30 transition-all"
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-mono text-indigo-400">
                       C{c.num}
                     </span>
@@ -200,10 +203,17 @@ export default async function ConformitePage() {
                       {badgeLabel(c.score)}
                     </span>
                   </div>
-                  <h4 className="text-sm font-medium text-[#f1f5f9] mt-1.5">
+                  <h4 className="text-sm font-medium text-[var(--text-primary)] mt-1.5">
                     {c.titre}
                   </h4>
-                  <p className="text-[11px] text-[#64748b] mt-0.5">{c.indicateurs}</p>
+                  {/* Indicator badges */}
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {c.indicateurs.map((ind) => (
+                      <span key={ind} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.05] text-[var(--text-dim)] font-mono">
+                        {ind}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <ProgressRing
                   value={c.score}
@@ -214,7 +224,7 @@ export default async function ConformitePage() {
               </div>
 
               {/* Progress bar */}
-              <div className="h-1.5 bg-[#1e293b] rounded-full overflow-hidden mb-2">
+              <div className="h-1.5 bg-[var(--border-subtle)] rounded-full overflow-hidden mb-2">
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
@@ -223,7 +233,7 @@ export default async function ConformitePage() {
                   }}
                 />
               </div>
-              <p className="text-[11px] text-[#64748b]">{c.details}</p>
+              <p className="text-[11px] text-[var(--text-dim)]">{c.details}</p>
             </div>
           );
         })}

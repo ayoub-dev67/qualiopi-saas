@@ -6,8 +6,10 @@ import {
   getOrganisme,
   getFormations,
   getFormateurs,
+  getJournal,
 } from "@/lib/sheets";
-import { CalendarDays, Users, Star, Shield, AlertTriangle, Clock } from "lucide-react";
+import { CalendarDays, Users, Star, Shield, Clock, Activity, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import KPICard from "@/components/KPICard";
 import StatusBadge from "@/components/StatusBadge";
 import SatisfactionChart from "@/components/charts/SatisfactionChart";
@@ -18,7 +20,7 @@ function normalizeStatus(s: string): string {
 }
 
 export default async function HomePage() {
-  const [sessions, inscriptions, satisfaction, reclamations, organisme, formations, formateurs] =
+  const [sessions, inscriptions, satisfaction, reclamations, organisme, formations, formateurs, journal] =
     await Promise.all([
       getSessions(),
       getInscriptions(),
@@ -27,6 +29,7 @@ export default async function HomePage() {
       getOrganisme(),
       getFormations(),
       getFormateurs(),
+      getJournal(),
     ]);
 
   // KPIs
@@ -44,7 +47,7 @@ export default async function HomePage() {
       ? (satNotes.reduce((a, b) => a + b, 0) / satNotes.length).toFixed(1)
       : "N/A";
 
-  // Score Qualiopi — même calcul que la page Conformité (moyenne des 7 critères)
+  // Score Qualiopi — moyenne des 7 critères
   const orgFields = organisme[0] ?? {};
   const orgFilled = Object.values(orgFields).filter((v) => v && v.trim() !== "").length;
   const orgTotal = Math.max(1, Object.keys(orgFields).length);
@@ -69,7 +72,12 @@ export default async function HomePage() {
     (r) => ["traitee", "resolue", "cloturee"].includes(normalizeStatus(r.statut ?? ""))
   ).length;
 
-  // Satisfaction chart data — aggregate by month
+  const satMoy =
+    satNotes.length > 0
+      ? satNotes.reduce((a, b) => a + b, 0) / satNotes.length
+      : 0;
+
+  // Satisfaction chart — aggregate by month
   const satByMonth = new Map<string, { sum: number; count: number }>();
   for (const s of satisfaction) {
     const note = parseFloat(s.note_globale);
@@ -88,11 +96,7 @@ export default async function HomePage() {
       note: Math.round((sum / count) * 10) / 10,
     }));
 
-  const satMoy = satNotes.length > 0
-    ? satNotes.reduce((a, b) => a + b, 0) / satNotes.length
-    : 0;
-
-  // Critères Qualiopi — identique à conformite/page.tsx
+  // Critères Qualiopi — C7 uses /10 scale (100% at >=7/10)
   const criteres = [
     { num: 1, label: "Information", score: Math.round((orgFilled / orgTotal) * 100) },
     { num: 2, label: "Objectifs", score: formations.length > 0 ? Math.round((formCompletes / formations.length) * 100) : 0 },
@@ -100,64 +104,29 @@ export default async function HomePage() {
     { num: 4, label: "Moyens", score: formateurs.length > 0 ? Math.round((formateursDossier / formateurs.length) * 100) : 0 },
     { num: 5, label: "Compétences", score: formateurs.length > 0 ? Math.round((formateursQualif / formateurs.length) * 100) : 0 },
     { num: 6, label: "Engagement", score: reclamations.length > 0 ? Math.round((recTraitees / reclamations.length) * 100) : 100 },
-    { num: 7, label: "Amélioration", score: satNotes.length > 0 ? Math.min(100, Math.round(satMoy * 20)) : 0 },
+    { num: 7, label: "Amélioration", score: satNotes.length > 0 ? Math.min(100, Math.round((satMoy / 7) * 100)) : 0 },
   ];
 
   const scoreQualiopi = Math.round(
     criteres.reduce((sum, c) => sum + c.score, 0) / criteres.length
   );
 
-  // Recent sessions (last 4)
-  const recentSessions = sessions.slice(-4).reverse();
+  // Recent sessions (last 5)
+  const recentSessions = sessions.slice(-5).reverse();
 
-  // Alertes dynamiques
-  type Alert = { type: "danger" | "warning" | "info"; message: string };
-  const alertes: Alert[] = [];
-
-  const sessionsEnCours = sessions.filter(
-    (s) => normalizeStatus(s.statut ?? "") === "en_cours"
-  );
-  for (const s of sessionsEnCours) {
-    if (s.workflow_0_ok !== "TRUE" && s.workflow_0_ok !== "true") {
-      alertes.push({
-        type: "danger",
-        message: `Session ${s.session_id} : convention non générée`,
-      });
-    }
-  }
-
-  const recNonTraitees = reclamations.filter(
-    (r) => normalizeStatus(r.statut ?? "") !== "traitee" && normalizeStatus(r.statut ?? "") !== "resolue"
-  );
-  for (const r of recNonTraitees.slice(0, 3)) {
-    alertes.push({
-      type: "warning",
-      message: `Réclamation ${r.reclamation_id} en attente : ${r.objet || "sans objet"}`,
-    });
-  }
-
-  if (inscrits > 0) {
-    alertes.push({
-      type: "info",
-      message: `${inscrits} apprenants inscrits — suivi en cours`,
-    });
-  }
-
-  const alertColors = {
-    danger: { border: "#ef4444", bg: "#450a0a", icon: "text-red-400" },
-    warning: { border: "#f59e0b", bg: "#451a03", icon: "text-amber-400" },
-    info: { border: "#3b82f6", bg: "#172554", icon: "text-blue-400" },
-  };
+  // Recent journal activity (last 8)
+  const recentJournal = journal.slice(-8).reverse();
 
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* KPI Row */}
+    <div className="space-y-6">
+      {/* Row 1: KPI Cards with stagger */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <KPICard
           label="Sessions actives"
           value={sessionsActives}
           icon={CalendarDays}
           accent="#6366f1"
+          delay={0}
           trend={sessions.length > 0 ? { direction: "up", value: `${sessions.length} total` } : undefined}
         />
         <KPICard
@@ -165,6 +134,7 @@ export default async function HomePage() {
           value={inscrits}
           icon={Users}
           accent="#10b981"
+          delay={80}
         />
         <KPICard
           label="Satisfaction moyenne"
@@ -172,6 +142,7 @@ export default async function HomePage() {
           suffix="/10"
           icon={Star}
           accent="#f59e0b"
+          delay={160}
           trend={satNotes.length > 0 ? { direction: parseFloat(satMoyenne) >= 7 ? "up" : "down", value: `${satNotes.length} réponses` } : undefined}
         />
         <KPICard
@@ -180,72 +151,102 @@ export default async function HomePage() {
           suffix="%"
           icon={Shield}
           accent="#3b82f6"
+          delay={240}
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2">
+      {/* Row 2: Charts (7/5 ratio) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-7">
           <SatisfactionChart data={satChartData} />
         </div>
-        <QualiopiScore score={scoreQualiopi} criteres={criteres} />
+        <div className="lg:col-span-5">
+          <QualiopiScore score={scoreQualiopi} criteres={criteres} />
+        </div>
       </div>
 
-      {/* Recent Sessions + Alertes */}
+      {/* Row 3: Recent Sessions + Activity (1/1 ratio) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Recent Sessions */}
-        <div className="bg-[#111827] border border-[#1e293b] rounded-2xl p-6">
+        {/* Sessions récentes */}
+        <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-medium text-[#94a3b8]">Sessions récentes</h3>
-            <Clock size={16} className="text-[#64748b]" />
+            <h3 className="text-sm font-medium text-[var(--text-secondary)]">Sessions récentes</h3>
+            <Clock size={16} className="text-[var(--text-dim)]" />
           </div>
           {recentSessions.length === 0 ? (
-            <p className="text-sm text-[#64748b]">Aucune session</p>
+            <p className="text-sm text-[var(--text-dim)]">Aucune session</p>
           ) : (
             <div className="space-y-3">
-              {recentSessions.map((s) => (
-                <div
-                  key={s.session_id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
-                >
-                  <div>
-                    <p className="text-sm text-[#f1f5f9] font-medium font-mono">
-                      {s.session_id}
-                    </p>
-                    <p className="text-xs text-[#64748b] mt-0.5">
-                      {s.date_debut}{s.date_fin ? ` → ${s.date_fin}` : ""} · {s.lieu || "—"}
-                    </p>
+              {recentSessions.map((s) => {
+                const d1 = s.date_debut ?? "";
+                const d2 = s.date_fin ?? "";
+                const fmtDate = (d: string) => {
+                  if (d.length >= 10) {
+                    const parts = d.substring(0, 10).split("-");
+                    if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
+                  }
+                  return d || "—";
+                };
+                return (
+                  <div
+                    key={s.session_id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm text-[var(--text-primary)] font-medium font-mono">
+                        {s.session_id}
+                      </p>
+                      <p className="text-xs text-[var(--text-dim)] mt-0.5">
+                        {fmtDate(d1)}{d2 ? ` → ${fmtDate(d2)}` : ""} · {s.lieu || "—"}
+                      </p>
+                    </div>
+                    <StatusBadge status={s.statut ?? "planifiee"} />
                   </div>
-                  <StatusBadge status={s.statut ?? "planifiee"} />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
+          <Link
+            href="/sessions"
+            className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] mt-4 transition-colors"
+          >
+            Voir toutes les sessions <ArrowRight size={12} />
+          </Link>
         </div>
 
-        {/* Alertes */}
-        <div className="bg-[#111827] border border-[#1e293b] rounded-2xl p-6">
+        {/* Activité récente (Journal_Systeme) */}
+        <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-medium text-[#94a3b8]">Alertes récentes</h3>
-            <AlertTriangle size={16} className="text-[#64748b]" />
+            <h3 className="text-sm font-medium text-[var(--text-secondary)]">Activité récente</h3>
+            <Activity size={16} className="text-[var(--text-dim)]" />
           </div>
-          {alertes.length === 0 ? (
-            <p className="text-sm text-[#64748b]">Aucune alerte</p>
+          {recentJournal.length === 0 ? (
+            <div className="flex flex-col items-center py-8">
+              <Activity size={32} className="text-[var(--text-dim)] mb-3" />
+              <p className="text-sm text-[var(--text-secondary)]">Aucune activité enregistrée</p>
+              <p className="text-xs text-[var(--text-dim)] mt-1">Les événements apparaîtront ici automatiquement</p>
+            </div>
           ) : (
-            <div className="space-y-2.5">
-              {alertes.slice(0, 5).map((a, i) => {
-                const c = alertColors[a.type];
+            <div className="space-y-3">
+              {recentJournal.map((j, i) => {
+                const isError = (j.statut ?? "").toLowerCase().includes("erreur") || (j.statut ?? "").toLowerCase().includes("error");
                 return (
                   <div
                     key={i}
-                    className="flex items-start gap-3 p-3 rounded-xl transition-colors"
-                    style={{
-                      borderLeft: `3px solid ${c.border}`,
-                      backgroundColor: `${c.bg}40`,
-                    }}
+                    className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
                   >
-                    <AlertTriangle size={14} className={`${c.icon} mt-0.5 shrink-0`} />
-                    <p className="text-xs text-[#c8d1dc] leading-relaxed">{a.message}</p>
+                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${isError ? "bg-red-400" : "bg-emerald-400"}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-[var(--text-primary)] truncate">
+                        {j.workflow ?? "—"}{j.action ? ` — ${j.action}` : ""}
+                      </p>
+                      <p className="text-xs text-[var(--text-dim)] mt-0.5">
+                        {j.date ?? j.timestamp ?? "—"}{j.session_id ? ` · ${j.session_id}` : ""}
+                      </p>
+                    </div>
+                    {isError && (
+                      <span className="text-[10px] text-red-400 bg-red-400/10 px-2 py-0.5 rounded-md font-medium shrink-0">ERREUR</span>
+                    )}
                   </div>
                 );
               })}
