@@ -133,7 +133,7 @@ export default async function AlertesPage() {
   if (inscrSansSat.length > 0) {
     alertes.push({
       level: "warning",
-      message: `${inscrSansSat.length} inscriptions sans retour satisfaction`,
+      message: `${inscrSansSat.length} inscription${inscrSansSat.length > 1 ? "s" : ""} sans retour satisfaction`,
       source: "Relances",
       timestamp: "—",
     });

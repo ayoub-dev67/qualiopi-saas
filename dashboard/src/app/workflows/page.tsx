@@ -23,6 +23,21 @@ function normalizeStatus(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
 }
 
+function relativeDate(dateStr: string): string {
+  if (!dateStr || dateStr === "—") return "—";
+  const d = new Date(dateStr.substring(0, 10));
+  if (isNaN(d.getTime())) return dateStr;
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays < 0) return dateStr;
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return "Hier";
+  if (diffDays < 30) return `Il y a ${diffDays}j`;
+  if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
+  return dateStr;
+}
+
 function isTrue(v: string | undefined): boolean {
   const lower = (v ?? "").toLowerCase();
   return lower === "true" || lower === "vrai";
@@ -63,9 +78,12 @@ export default async function WorkflowsPage() {
     let errorCount = 0;
 
     // Check journal for this workflow
-    const journalEntries = journal.filter(
-      (j) => (j.workflow ?? "").toUpperCase().includes(wf.id)
-    );
+    // Journal uses "W0", "W1", etc. — match both "W0" and "WF0" patterns
+    const wfNum = wf.id.replace("WF", "");
+    const journalEntries = journal.filter((j) => {
+      const w = (j.workflow ?? "").toUpperCase().replace(/\s+/g, "");
+      return w === `W${wfNum}` || w === `WF${wfNum}` || w.includes(`W${wfNum}_`) || w.includes(`WF${wfNum}_`);
+    });
     execCount = journalEntries.length;
     errorCount = journalEntries.filter(
       (j) => normalizeStatus(j.statut ?? "") === "erreur" || normalizeStatus(j.statut ?? "") === "error"
@@ -73,7 +91,8 @@ export default async function WorkflowsPage() {
 
     if (journalEntries.length > 0) {
       const last = journalEntries[journalEntries.length - 1];
-      lastExec = last.date ?? last.timestamp ?? "—";
+      const rawDate = last.date ?? last.timestamp ?? "";
+      lastExec = relativeDate(rawDate);
     }
 
     // Last 3 executions for mini timeline

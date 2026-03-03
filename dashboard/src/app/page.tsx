@@ -19,6 +19,20 @@ function normalizeStatus(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
 }
 
+const MOIS_COURT = ["janv.", "fév.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+/** Format "2026-02-27" + "20:06:00" → "27 fév. à 20:06" */
+function fmtJournalDate(date: string, heure?: string): string {
+  if (!date || date === "—") return "—";
+  const parts = date.substring(0, 10).split("-");
+  if (parts.length !== 3) return date;
+  const day = parseInt(parts[2], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  if (isNaN(day) || isNaN(month) || month < 0 || month > 11) return date;
+  const timeStr = heure ? ` à ${heure.substring(0, 5)}` : "";
+  return `${day} ${MOIS_COURT[month]}${timeStr}`;
+}
+
 export default async function HomePage() {
   const [sessions, inscriptions, satisfaction, reclamations, organisme, formations, formateurs, journal] =
     await Promise.all([
@@ -236,17 +250,18 @@ export default async function HomePage() {
             <div className="space-y-3">
               {recentJournal.map((j, i) => {
                 const isError = (j.statut ?? "").toLowerCase().includes("erreur") || (j.statut ?? "").toLowerCase().includes("error");
-                const timeStr = j.heure ? ` à ${j.heure}` : "";
-                // Workflow badge color
-                const wfKey = (j.workflow ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+                // Workflow badge color — journal uses "W0" or "WF0"
+                const rawWf = (j.workflow ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+                const wfNum = rawWf.replace(/^WF?/, "");
+                const wfKey = `W${wfNum}`;
                 const WF_COLORS: Record<string, { bg: string; text: string }> = {
-                  WF0: { bg: "rgba(16,185,129,0.15)", text: "#6ee7b7" },
-                  WF1: { bg: "rgba(59,130,246,0.15)", text: "#93c5fd" },
-                  WF2: { bg: "rgba(99,102,241,0.15)", text: "#a5b4fc" },
-                  WF3: { bg: "rgba(245,158,11,0.15)", text: "#fcd34d" },
-                  WF4: { bg: "rgba(236,72,153,0.15)", text: "#f9a8d4" },
-                  WF5: { bg: "rgba(139,92,246,0.15)", text: "#c4b5fd" },
-                  WF6: { bg: "rgba(20,184,166,0.15)", text: "#5eead4" },
+                  W0: { bg: "rgba(16,185,129,0.15)", text: "#6ee7b7" },
+                  W1: { bg: "rgba(59,130,246,0.15)", text: "#93c5fd" },
+                  W2: { bg: "rgba(99,102,241,0.15)", text: "#a5b4fc" },
+                  W3: { bg: "rgba(245,158,11,0.15)", text: "#fcd34d" },
+                  W4: { bg: "rgba(236,72,153,0.15)", text: "#f9a8d4" },
+                  W5: { bg: "rgba(139,92,246,0.15)", text: "#c4b5fd" },
+                  W6: { bg: "rgba(20,184,166,0.15)", text: "#5eead4" },
                 };
                 const wfColor = WF_COLORS[wfKey] ?? { bg: "rgba(71,85,105,0.15)", text: "#94a3b8" };
                 return (
@@ -267,7 +282,7 @@ export default async function HomePage() {
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-[var(--text-dim)]">
-                          {j.date ?? j.timestamp ?? "—"}{timeStr}
+                          {fmtJournalDate(j.date ?? j.timestamp ?? "", j.heure)}
                         </span>
                         {j.session_id && (
                           <span className="text-xs text-[var(--text-dim)] font-mono">{j.session_id}</span>
