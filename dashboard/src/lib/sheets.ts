@@ -18,14 +18,21 @@ async function fetchSheet(sheetId: string, tabName: string): Promise<Record<stri
 
   if (rows.length < 2) return [];
 
+  const INVALID = ["#ERROR!", "#REF!", "Formula parse error"];
+
   const headers = rows[0];
-  return rows.slice(1).map((row) => {
-    const obj: Record<string, string> = {};
-    headers.forEach((header, i) => {
-      obj[header] = row[i] ?? "";
+  return rows.slice(1)
+    .map((row) => {
+      const obj: Record<string, string> = {};
+      headers.forEach((header, i) => {
+        obj[header] = row[i] ?? "";
+      });
+      return obj;
+    })
+    .filter((obj) => {
+      const first = obj[headers[0]] ?? "";
+      return first.trim() !== "" && !INVALID.includes(first);
     });
-    return obj;
-  });
 }
 
 // Sheet 01 - Référentiel
