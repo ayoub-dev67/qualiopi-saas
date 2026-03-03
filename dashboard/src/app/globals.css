@@ -10,6 +10,18 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-dm-sans);
   --font-mono: var(--font-jetbrains-mono);
+  --animate-fade-in: fade-in 0.5s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 body {
@@ -17,7 +29,6 @@ body {
   color: var(--foreground);
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }

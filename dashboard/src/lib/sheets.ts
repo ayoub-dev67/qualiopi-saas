@@ -9,7 +9,8 @@ async function fetchSheet(sheetId: string, tabName: string): Promise<Record<stri
   const res = await fetch(url, { next: { revalidate: 30 } });
 
   if (!res.ok) {
-    throw new Error(`Google Sheets API error: ${res.status} ${res.statusText} (sheet: ${sheetId}, tab: ${tabName})`);
+    console.error(`Sheets API error ${res.status} for tab "${tabName}"`);
+    return [];
   }
 
   const data = await res.json();
@@ -28,19 +29,19 @@ async function fetchSheet(sheetId: string, tabName: string): Promise<Record<stri
 }
 
 // Sheet 01 - Référentiel
-export const getOrganisme   = () => fetchSheet(SHEET_01, "Organisme");
-export const getFormations  = () => fetchSheet(SHEET_01, "Formations");
-export const getFormateurs  = () => fetchSheet(SHEET_01, "Formateurs");
-export const getSessions    = () => fetchSheet(SHEET_01, "Sessions");
-export const getConfig      = () => fetchSheet(SHEET_01, "Config");
-export const getFinancier   = () => fetchSheet(SHEET_01, "Financier");
+export const getOrganisme  = () => fetchSheet(SHEET_01, "Organisme");
+export const getFormations = () => fetchSheet(SHEET_01, "Formations");
+export const getFormateurs = () => fetchSheet(SHEET_01, "Formateurs");
+export const getSessions   = () => fetchSheet(SHEET_01, "Sessions");
+export const getConfig     = () => fetchSheet(SHEET_01, "Config");
+export const getFinancier  = () => fetchSheet(SHEET_01, "Financier");
 
 // Sheet 02 - Suivi Apprenants
 export const getInscriptions = () => fetchSheet(SHEET_02, "Inscriptions");
 export const getApprenants   = () => fetchSheet(SHEET_02, "Apprenants");
+export const getSatisfaction = () => fetchSheet(SHEET_02, "Satisfaction");
+export const getReclamations = () => fetchSheet(SHEET_02, "Reclamations");
 
 // Sheet 03 - Qualité & KPIs
-export const getSatisfaction  = () => fetchSheet(SHEET_03, "Satisfaction");
-export const getReclamations  = () => fetchSheet(SHEET_03, "Reclamations");
-export const getKPIs          = () => fetchSheet(SHEET_03, "KPIs");
-export const getJournal       = () => fetchSheet(SHEET_03, "Journal_Systeme");
+export const getKPIs    = () => fetchSheet(SHEET_03, "KPIs");
+export const getJournal = () => fetchSheet(SHEET_03, "Journal_Systeme");
