@@ -32,21 +32,26 @@ async function fetchSheet(sheetId: string, tabName: string): Promise<Record<stri
     });
 }
 
-// Sheet 01 - Référentiel
+// Sheet 01 - 01_Referentiel
 export const getOrganisme  = () => fetchSheet(SHEET_01, "Organisme");
 export const getFormations = () => fetchSheet(SHEET_01, "Formations");
 export const getFormateurs = () => fetchSheet(SHEET_01, "Formateurs");
 export const getSessions   = () => fetchSheet(SHEET_01, "Sessions");
-export const getConfig     = () => fetchSheet(SHEET_01, "Config");
 export const getFinancier  = () => fetchSheet(SHEET_01, "Financier");
+export const getConfig     = () => fetchSheet(SHEET_01, "Config");
 
-// Sheet 02 - Suivi Apprenants
-export const getInscriptions = () => fetchSheet(SHEET_02, "Inscriptions");
-export const getApprenants   = () => fetchSheet(SHEET_02, "Apprenants");
+// Sheet 02 - 02_Suivi_Apprenants
+export const getApprenants      = () => fetchSheet(SHEET_02, "Apprenants");
+export const getInscriptions    = () => fetchSheet(SHEET_02, "Inscriptions");
+export const getPositionnements = () => fetchSheet(SHEET_02, "Positionnement");
+export const getEmargement      = () => fetchSheet(SHEET_02, "Emargement");
+export const getEvaluations     = () => fetchSheet(SHEET_02, "Evaluations");
+export const getSatisfaction    = () => fetchSheet(SHEET_02, "Satisfaction");
+export const getSuiviFroid      = () => fetchSheet(SHEET_02, "Suivi_Froid");
+export const getReclamations    = () => fetchSheet(SHEET_02, "Reclamations");
 
-// Sheet 03 - Qualité & KPIs
-export const getSatisfaction = () => fetchSheet(SHEET_03, "Satisfaction");
-export const getReclamations = () => fetchSheet(SHEET_03, "Réclamations");
-export const getKPIs         = () => fetchSheet(SHEET_03, "KPIs");
-export const getJournal      = () => fetchSheet(SHEET_03, "Journal_Systeme");
-export const getSuiviFroid   = () => fetchSheet(SHEET_03, "Suivi_Froid");
+// Sheet 03 - 03_Qualite_KPIs
+export const getIndicateursQualiopi  = () => fetchSheet(SHEET_03, "Indicateurs_Qualiopi");
+export const getJournal              = () => fetchSheet(SHEET_03, "Journal_Systeme");
+export const getKPIs                 = () => fetchSheet(SHEET_03, "KPIs");
+export const getActionsAmelioration  = () => fetchSheet(SHEET_03, "Actions_Amelioration");
