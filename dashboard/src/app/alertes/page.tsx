@@ -14,7 +14,8 @@ function normalizeStatus(s: string): string {
 }
 
 function isTrue(v: string | undefined): boolean {
-  return (v ?? "").toLowerCase() === "true";
+  const lower = (v ?? "").toLowerCase();
+  return lower === "true" || lower === "vrai";
 }
 
 type AlertLevel = "danger" | "warning" | "info";

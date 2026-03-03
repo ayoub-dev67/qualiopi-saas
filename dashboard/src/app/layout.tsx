@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: "Tableau de bord de gestion Qualiopi",
 };
 
-function isTrue(v: string | undefined) { return v === "TRUE" || v === "true"; }
+function isTrue(v: string | undefined) { const l = (v ?? "").toLowerCase(); return l === "true" || l === "vrai"; }
 function norm(s: string) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_"); }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

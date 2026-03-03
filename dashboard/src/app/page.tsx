@@ -237,19 +237,42 @@ export default async function HomePage() {
               {recentJournal.map((j, i) => {
                 const isError = (j.statut ?? "").toLowerCase().includes("erreur") || (j.statut ?? "").toLowerCase().includes("error");
                 const timeStr = j.heure ? ` à ${j.heure}` : "";
+                // Workflow badge color
+                const wfKey = (j.workflow ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+                const WF_COLORS: Record<string, { bg: string; text: string }> = {
+                  WF0: { bg: "rgba(16,185,129,0.15)", text: "#6ee7b7" },
+                  WF1: { bg: "rgba(59,130,246,0.15)", text: "#93c5fd" },
+                  WF2: { bg: "rgba(99,102,241,0.15)", text: "#a5b4fc" },
+                  WF3: { bg: "rgba(245,158,11,0.15)", text: "#fcd34d" },
+                  WF4: { bg: "rgba(236,72,153,0.15)", text: "#f9a8d4" },
+                  WF5: { bg: "rgba(139,92,246,0.15)", text: "#c4b5fd" },
+                  WF6: { bg: "rgba(20,184,166,0.15)", text: "#5eead4" },
+                };
+                const wfColor = WF_COLORS[wfKey] ?? { bg: "rgba(71,85,105,0.15)", text: "#94a3b8" };
                 return (
                   <div
                     key={i}
                     className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
                   >
-                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${isError ? "bg-red-400" : "bg-emerald-400"}`} />
+                    {/* Workflow badge */}
+                    <span
+                      className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded shrink-0 mt-0.5"
+                      style={{ background: wfColor.bg, color: wfColor.text }}
+                    >
+                      {wfKey || "SYS"}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-[var(--text-primary)] truncate">
-                        {j.workflow ?? "—"}{j.message ? ` — ${j.message}` : ""}
+                        {j.message || "—"}
                       </p>
-                      <p className="text-xs text-[var(--text-dim)] mt-0.5">
-                        {j.date ?? j.timestamp ?? "—"}{timeStr}{j.session_id ? ` · ${j.session_id}` : ""}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-[var(--text-dim)]">
+                          {j.date ?? j.timestamp ?? "—"}{timeStr}
+                        </span>
+                        {j.session_id && (
+                          <span className="text-xs text-[var(--text-dim)] font-mono">{j.session_id}</span>
+                        )}
+                      </div>
                     </div>
                     {isError && (
                       <span className="text-[10px] text-red-400 bg-red-400/10 px-2 py-0.5 rounded-md font-medium shrink-0">ERREUR</span>

@@ -43,6 +43,22 @@ function convertDecimalHour(val: string): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+/** Convert Google Sheets serial date (e.g. 46078) to YYYY-MM-DD */
+function convertSerialDate(val: string): string {
+  const num = parseInt(val, 10);
+  if (isNaN(num) || num < 1000 || num > 100000) return val;
+  // Google Sheets epoch: 1899-12-30
+  const epoch = new Date(1899, 11, 30);
+  const date = new Date(epoch.getTime() + num * 86400000);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Check if value looks like a decimal number (corrupted cell) */
+const DECIMAL_RE = /^\d+[.,]\d+$/;
+
 // Sheet 01 - 01_Referentiel
 export const getOrganisme  = () => fetchSheet(SHEET_01, "Organisme");
 export const getFormations = () => fetchSheet(SHEET_01, "Formations");
@@ -66,18 +82,30 @@ export const getIndicateursQualiopi  = () => fetchSheet(SHEET_03, "Indicateurs_Q
 export const getKPIs                 = () => fetchSheet(SHEET_03, "KPIs");
 export const getActionsAmelioration  = () => fetchSheet(SHEET_03, "Actions_Amelioration");
 
-/** Journal with post-processing: filter bad rows, convert decimal hours */
+/** Journal with aggressive filtering + data conversion */
 export async function getJournal() {
   const rows = await fetchSheet(SHEET_03, "Journal_Systeme");
   return rows
     .filter((r) => {
+      // Filter empty/corrupted messages
       const msg = (r.message ?? "").trim();
       if (msg === "") return false;
       if (msg.includes("#NAME?") || msg.includes("#ERROR!") || msg.includes("#REF!")) return false;
+      // Filter corrupted date (decimal number like "46078.006663")
+      const date = (r.date ?? "").trim();
+      if (DECIMAL_RE.test(date)) return false;
+      // Filter corrupted session_id or heure containing "#"
+      if ((r.session_id ?? "").includes("#")) return false;
+      if ((r.heure ?? "").includes("#")) return false;
       return true;
     })
     .map((r) => {
+      // Convert decimal hour to HH:MM:SS
       if (r.heure) r.heure = convertDecimalHour(r.heure);
+      // Convert serial date to YYYY-MM-DD if needed
+      if (r.date && /^\d{4,6}$/.test(r.date.trim())) {
+        r.date = convertSerialDate(r.date.trim());
+      }
       return r;
     });
 }
