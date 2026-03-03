@@ -14,7 +14,7 @@ function normalizeStatus(s: string): string {
 }
 
 function isTrue(v: string | undefined): boolean {
-  return v === "TRUE" || v === "true";
+  return (v ?? "").toLowerCase() === "true";
 }
 
 type AlertLevel = "danger" | "warning" | "info";
@@ -53,7 +53,7 @@ export default async function AlertesPage() {
   );
   for (const s of sessionsPlanifiees) {
     if (!isTrue(s.workflow_0_ok) && s.date_debut) {
-      const daysUntil = -daysBetween(s.date_debut, now); // negative = future
+      const daysUntil = -daysBetween(s.date_debut, now);
       if (daysUntil >= 0 && daysUntil <= 3) {
         alertes.push({
           level: "danger",
@@ -196,6 +196,17 @@ export default async function AlertesPage() {
         <KPICard label="Avertissements" value={nbWarning} icon={AlertTriangle} accent="#f59e0b" delay={80} />
         <KPICard label="Informations" value={nbInfo} icon={Info} accent="#3b82f6" delay={160} />
       </div>
+
+      {/* Positive state when no critical alerts */}
+      {nbDanger === 0 && (
+        <div className="glass-card p-5 flex items-center gap-4" style={{ borderColor: "rgba(16,185,129,0.2)", background: "rgba(6,78,59,0.15)" }}>
+          <CheckCircle2 size={24} className="text-emerald-400 shrink-0" />
+          <div>
+            <p className="text-sm text-emerald-300 font-medium">Aucune alerte critique — tout est en ordre</p>
+            <p className="text-xs text-emerald-400/60 mt-0.5">Tous les workflows critiques fonctionnent correctement</p>
+          </div>
+        </div>
+      )}
 
       {/* Alerts list */}
       <div className="glass-card p-6">

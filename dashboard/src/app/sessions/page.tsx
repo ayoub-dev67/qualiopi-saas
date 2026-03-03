@@ -36,6 +36,13 @@ export default async function SessionsPage() {
     if (st in counts) counts[st as keyof typeof counts]++;
   }
 
+  // Gradient color for progress bar
+  function progressGradient(pct: number): string {
+    if (pct >= 80) return "linear-gradient(90deg, #059669, #10b981)";
+    if (pct >= 50) return "linear-gradient(90deg, #d97706, #f59e0b)";
+    return "linear-gradient(90deg, #4f46e5, #6366f1)";
+  }
+
   // Table rows
   const tableRows = sessions.map((s) => {
     const nbInscrits = parseInt(s.nb_inscrits ?? "0") || 0;
@@ -43,8 +50,8 @@ export default async function SessionsPage() {
     const pctFill = Math.min(100, Math.round((nbInscrits / nbPlaces) * 100));
 
     return [
-      // Session ID
-      <span key="id" className="font-mono text-indigo-400 text-xs">{s.session_id}</span>,
+      // Session ID — hover underline
+      <span key="id" className="font-mono text-indigo-400 text-xs hover:underline cursor-default">{s.session_id}</span>,
       // Formation
       <span key="f" className="text-sm">{formationMap.get(s.formation_id) ?? s.formation_id}</span>,
       // Formateur
@@ -55,14 +62,14 @@ export default async function SessionsPage() {
       </span>,
       // Lieu
       <span key="l" className="text-xs">{s.lieu || "—"}</span>,
-      // Inscrits (progress bar)
+      // Inscrits (gradient progress bar)
       <div key="ins" className="flex items-center gap-2 min-w-[100px]">
         <div className="flex-1 h-1.5 bg-[var(--border-subtle)] rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{
               width: `${pctFill}%`,
-              backgroundColor: pctFill >= 80 ? "#10b981" : pctFill >= 50 ? "#f59e0b" : "#6366f1",
+              background: progressGradient(pctFill),
             }}
           />
         </div>

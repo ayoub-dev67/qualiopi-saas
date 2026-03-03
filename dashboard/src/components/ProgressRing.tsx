@@ -20,7 +20,12 @@ export default function ProgressRing({
 
   return (
     <div className="relative inline-flex items-center justify-center">
-      <svg width={size} height={size} className="-rotate-90">
+      <svg
+        width={size}
+        height={size}
+        className="-rotate-90"
+        style={{ filter: `drop-shadow(0 0 8px ${color}40)` }}
+      >
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -39,7 +44,7 @@ export default function ProgressRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="transition-all duration-1000 ease-out"
+          style={{ transition: "stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
         />
       </svg>
       <span className="absolute text-sm font-bold text-[#f1f5f9]">

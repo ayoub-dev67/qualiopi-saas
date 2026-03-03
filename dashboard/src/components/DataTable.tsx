@@ -26,7 +26,7 @@ export default function DataTable({
     <div className="overflow-x-auto glass-card">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[var(--border-subtle)]">
+          <tr className="border-b border-[var(--border-subtle)]" style={{ background: "rgba(255,255,255,0.02)" }}>
             {headers.map((h) => (
               <th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--text-dim)] uppercase tracking-wider whitespace-nowrap">
                 {h}

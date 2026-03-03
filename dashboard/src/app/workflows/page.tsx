@@ -11,9 +11,9 @@ interface WorkflowDef {
 
 const WORKFLOWS: WorkflowDef[] = [
   { id: "WF0", name: "Setup Session", description: "Création dossier Drive, génération Convention PDF (Gotenberg), envoi Convocations email avec pièces jointes" },
-  { id: "WF1", name: "Positionnement", description: "Envoi automatique des liens Tally pour le questionnaire de positionnement pré-formation à chaque apprenant inscrit" },
+  { id: "WF1", name: "Positionnement", description: "Envoi automatique des liens Google Forms pour le questionnaire de positionnement pré-formation à chaque apprenant inscrit" },
   { id: "WF2", name: "Émargement", description: "Génération et envoi des feuilles de présence quotidiennes, suivi de l'émargement digital par session" },
-  { id: "WF3", name: "Satisfaction & Évaluation", description: "Envoi des questionnaires Tally de satisfaction et d'évaluation des acquis post-session, collecte et agrégation des résultats" },
+  { id: "WF3", name: "Satisfaction & Évaluation", description: "Envoi des questionnaires Google Forms de satisfaction et d'évaluation des acquis post-session, collecte et agrégation des résultats" },
   { id: "WF4", name: "Amélioration Continue", description: "Traitement des réclamations, calcul hebdomadaire des KPIs qualité, génération du rapport d'amélioration continue" },
   { id: "WF5", name: "Relances", description: "Relances automatiques multi-niveaux par email pour les questionnaires non complétés, conventions non signées, documents manquants" },
   { id: "WF6", name: "Suivi à Froid", description: "Génération des attestations et certificats de réalisation, envoi du questionnaire de suivi à froid 6 mois post-formation" },
@@ -24,7 +24,7 @@ function normalizeStatus(s: string): string {
 }
 
 function isTrue(v: string | undefined): boolean {
-  return v === "TRUE" || v === "true";
+  return (v ?? "").toLowerCase() === "true";
 }
 
 export default async function WorkflowsPage() {
@@ -75,6 +75,18 @@ export default async function WorkflowsPage() {
       lastExec = last.date ?? last.timestamp ?? "—";
     }
 
+    // Last 3 executions for mini timeline
+    const last3 = journalEntries.slice(-3);
+    const timeline: ("ok" | "error" | "none")[] = [];
+    for (let t = 0; t < 3; t++) {
+      if (t < last3.length) {
+        const st = normalizeStatus(last3[t].statut ?? "");
+        timeline.push(st === "erreur" || st === "error" ? "error" : "ok");
+      } else {
+        timeline.push("none");
+      }
+    }
+
     // Determine status
     let status: string;
     let concerned = 0;
@@ -105,7 +117,7 @@ export default async function WorkflowsPage() {
       }
     }
 
-    return { ...wf, status, lastExec, execCount, errorCount, concerned, done, missing };
+    return { ...wf, status, lastExec, execCount, errorCount, concerned, done, missing, timeline };
   });
 
   // Counts
@@ -113,6 +125,12 @@ export default async function WorkflowsPage() {
   const countWarn = workflowData.filter((w) => w.status === "warning").length;
   const countErr = workflowData.filter((w) => w.status === "error").length;
   const countInactive = workflowData.filter((w) => w.status === "inactive").length;
+
+  const timelineColor = (s: "ok" | "error" | "none") => {
+    if (s === "ok") return "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]";
+    if (s === "error") return "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]";
+    return "bg-[var(--border-subtle)]";
+  };
 
   return (
     <div className="space-y-6">
@@ -126,10 +144,10 @@ export default async function WorkflowsPage() {
 
       {/* Workflow cards */}
       <div className="space-y-4">
-        {workflowData.map((wf) => (
+        {workflowData.map((wf, idx) => (
           <div
             key={wf.id}
-            className="glass-card p-6 hover:border-[var(--accent)]/30 transition-all"
+            className={`glass-card p-6 stagger-${idx + 1}`}
           >
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div className="flex items-start gap-5">
@@ -181,6 +199,14 @@ export default async function WorkflowsPage() {
                 </span>
               </div>
             )}
+
+            {/* Mini timeline — 3 last executions */}
+            <div className="mt-4 pt-3 border-t border-[var(--border-subtle)]/50 flex items-center gap-2">
+              <span className="text-[10px] text-[var(--text-dim)] mr-1">Dernières exec.</span>
+              {wf.timeline.map((t, ti) => (
+                <span key={ti} className={`w-2.5 h-2.5 rounded-full ${timelineColor(t)}`} />
+              ))}
+            </div>
           </div>
         ))}
       </div>

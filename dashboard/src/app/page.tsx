@@ -114,7 +114,7 @@ export default async function HomePage() {
   // Recent sessions (last 5)
   const recentSessions = sessions.slice(-5).reverse();
 
-  // Recent journal activity (last 8)
+  // Recent journal activity (last 8) — already filtered & hour-converted by getJournal()
   const recentJournal = journal.slice(-8).reverse();
 
   return (
@@ -157,10 +157,10 @@ export default async function HomePage() {
 
       {/* Row 2: Charts (7/5 ratio) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-7 stagger-1">
           <SatisfactionChart data={satChartData} />
         </div>
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5 stagger-2">
           <QualiopiScore score={scoreQualiopi} criteres={criteres} />
         </div>
       </div>
@@ -168,7 +168,7 @@ export default async function HomePage() {
       {/* Row 3: Recent Sessions + Activity (1/1 ratio) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Sessions récentes */}
-        <div className="glass-card p-6">
+        <div className="glass-card p-6 stagger-3">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-sm font-medium text-[var(--text-secondary)]">Sessions récentes</h3>
             <Clock size={16} className="text-[var(--text-dim)]" />
@@ -214,15 +214,21 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        {/* Activité récente (Journal_Systeme) */}
-        <div className="glass-card p-6">
+        {/* Activité récente (Journal_Systeme) — cleaned data */}
+        <div className="glass-card p-6 stagger-4">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-sm font-medium text-[var(--text-secondary)]">Activité récente</h3>
             <Activity size={16} className="text-[var(--text-dim)]" />
           </div>
           {recentJournal.length === 0 ? (
             <div className="flex flex-col items-center py-8">
-              <Activity size={32} className="text-[var(--text-dim)] mb-3" />
+              {/* Empty state SVG illustration */}
+              <svg width="80" height="60" viewBox="0 0 80 60" fill="none" className="mb-4 opacity-30">
+                <rect x="5" y="10" width="70" height="40" rx="6" stroke="#475569" strokeWidth="1.5" fill="none" />
+                <line x1="15" y1="22" x2="45" y2="22" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+                <line x1="15" y1="30" x2="55" y2="30" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+                <line x1="15" y1="38" x2="35" y2="38" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+              </svg>
               <p className="text-sm text-[var(--text-secondary)]">Aucune activité enregistrée</p>
               <p className="text-xs text-[var(--text-dim)] mt-1">Les événements apparaîtront ici automatiquement</p>
             </div>
@@ -230,6 +236,7 @@ export default async function HomePage() {
             <div className="space-y-3">
               {recentJournal.map((j, i) => {
                 const isError = (j.statut ?? "").toLowerCase().includes("erreur") || (j.statut ?? "").toLowerCase().includes("error");
+                const timeStr = j.heure ? ` à ${j.heure}` : "";
                 return (
                   <div
                     key={i}
@@ -238,10 +245,10 @@ export default async function HomePage() {
                     <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${isError ? "bg-red-400" : "bg-emerald-400"}`} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-[var(--text-primary)] truncate">
-                        {j.workflow ?? "—"}{j.action ? ` — ${j.action}` : ""}
+                        {j.workflow ?? "—"}{j.message ? ` — ${j.message}` : ""}
                       </p>
                       <p className="text-xs text-[var(--text-dim)] mt-0.5">
-                        {j.date ?? j.timestamp ?? "—"}{j.session_id ? ` · ${j.session_id}` : ""}
+                        {j.date ?? j.timestamp ?? "—"}{timeStr}{j.session_id ? ` · ${j.session_id}` : ""}
                       </p>
                     </div>
                     {isError && (

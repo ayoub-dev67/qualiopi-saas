@@ -93,12 +93,12 @@ export default function Sidebar({ orgName, orgNda, alertCount = 0, serverTime }:
         })}
       </nav>
 
-      {/* Live indicator */}
+      {/* Live indicator — 8px dot with pulse + "Données live · Sync il y a Xs" */}
       <div className="px-3 lg:px-5 py-3 border-t border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-glow shrink-0" />
-          <span className="hidden lg:inline text-[10px] text-[var(--text-dim)]">
-            Sync {syncLabel}
+          <span className="hidden lg:inline text-[11px] text-[var(--text-dim)] leading-tight">
+            Données live · Sync {syncLabel}
           </span>
         </div>
       </div>

@@ -32,6 +32,17 @@ async function fetchSheet(sheetId: string, tabName: string): Promise<Record<stri
     });
 }
 
+/** Convert Google Sheets decimal hour (0.006663…) to HH:MM:SS */
+function convertDecimalHour(val: string): string {
+  const num = parseFloat(val);
+  if (isNaN(num) || num < 0 || num >= 1) return val;
+  const totalSeconds = Math.round(num * 24 * 3600);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 // Sheet 01 - 01_Referentiel
 export const getOrganisme  = () => fetchSheet(SHEET_01, "Organisme");
 export const getFormations = () => fetchSheet(SHEET_01, "Formations");
@@ -52,6 +63,21 @@ export const getReclamations    = () => fetchSheet(SHEET_02, "Reclamations");
 
 // Sheet 03 - 03_Qualite_KPIs
 export const getIndicateursQualiopi  = () => fetchSheet(SHEET_03, "Indicateurs_Qualiopi");
-export const getJournal              = () => fetchSheet(SHEET_03, "Journal_Systeme");
 export const getKPIs                 = () => fetchSheet(SHEET_03, "KPIs");
 export const getActionsAmelioration  = () => fetchSheet(SHEET_03, "Actions_Amelioration");
+
+/** Journal with post-processing: filter bad rows, convert decimal hours */
+export async function getJournal() {
+  const rows = await fetchSheet(SHEET_03, "Journal_Systeme");
+  return rows
+    .filter((r) => {
+      const msg = (r.message ?? "").trim();
+      if (msg === "") return false;
+      if (msg.includes("#NAME?") || msg.includes("#ERROR!") || msg.includes("#REF!")) return false;
+      return true;
+    })
+    .map((r) => {
+      if (r.heure) r.heure = convertDecimalHour(r.heure);
+      return r;
+    });
+}
