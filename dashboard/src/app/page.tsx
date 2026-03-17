@@ -202,12 +202,13 @@ export default async function HomePage() {
                   return d || "—";
                 };
                 return (
-                  <div
+                  <Link
                     key={s.session_id}
+                    href={`/sessions/${s.session_id}`}
                     className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
                   >
                     <div>
-                      <p className="text-sm text-[var(--text-primary)] font-medium font-mono">
+                      <p className="text-sm text-indigo-400 font-medium font-mono hover:underline">
                         {s.session_id}
                       </p>
                       <p className="text-xs text-[var(--text-dim)] mt-0.5">
@@ -215,7 +216,7 @@ export default async function HomePage() {
                       </p>
                     </div>
                     <StatusBadge status={s.statut ?? "planifiee"} />
-                  </div>
+                  </Link>
                 );
               })}
             </div>

@@ -1,4 +1,5 @@
 import { getSessions, getFormations, getFormateurs } from "@/lib/sheets";
+import Link from "next/link";
 import { CalendarDays, PlayCircle, CheckCircle2, XCircle, Search } from "lucide-react";
 import KPICard from "@/components/KPICard";
 import StatusBadge from "@/components/StatusBadge";
@@ -51,7 +52,7 @@ export default async function SessionsPage() {
 
     return [
       // Session ID — hover underline
-      <span key="id" className="font-mono text-indigo-400 text-xs hover:underline cursor-default">{s.session_id}</span>,
+      <Link key="id" href={`/sessions/${s.session_id}`} className="font-mono text-indigo-400 text-xs hover:underline cursor-pointer">{s.session_id}</Link>,
       // Formation
       <span key="f" className="text-sm">{formationMap.get(s.formation_id) ?? s.formation_id}</span>,
       // Formateur
