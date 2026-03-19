@@ -1,0 +1,11 @@
+{
+  "crons": [
+    { "path": "/api/cron/w0", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/w1", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/w2", "schedule": "*/10 * * * *" },
+    { "path": "/api/cron/w3", "schedule": "*/10 * * * *" },
+    { "path": "/api/cron/w4", "schedule": "0 8 * * 1" },
+    { "path": "/api/cron/w5", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/w6", "schedule": "0 8 * * 1" }
+  ]
+}
