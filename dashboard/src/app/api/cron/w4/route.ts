@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCronAuth } from "@/lib/cron-auth";
 import { getSessions, getInscriptions, getSatisfaction, getReclamations, getEmargement, getOrganisme, getConfig } from "@/lib/sheets";
-import { updateCell, appendRow, logJournal } from "@/lib/sheets-write";
+import { updateCell, logJournal } from "@/lib/sheets-write";
 import { sendEmail } from "@/lib/email";
 
 const SHEET_02 = process.env.SHEET_02_ID!;

@@ -5,11 +5,7 @@ import { updateSessionWorkflow, logJournal } from "@/lib/sheets-write";
 import { ensureSessionFolders, uploadPDF } from "@/lib/drive";
 import { ConventionPDF, ConvocationPDF } from "@/lib/pdf";
 import { sendEmail } from "@/lib/email";
-
-function isTrue(v: string | undefined) {
-  const l = (v ?? "").toLowerCase();
-  return l === "true" || l === "vrai";
-}
+import { isTrue } from "@/lib/sheets-utils";
 
 export async function GET(req: NextRequest) {
   const authError = verifyCronAuth(req);

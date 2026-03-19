@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCronAuth } from "@/lib/cron-auth";
-import { getSessions, getInscriptions, getApprenants, getOrganisme, getFormations, getEmargement } from "@/lib/sheets";
+import { getSessions, getInscriptions, getApprenants, getOrganisme, getFormations, getEmargement, getFormateurs } from "@/lib/sheets";
 import { updateSessionWorkflow, logJournal, appendRow } from "@/lib/sheets-write";
 import { ensureSessionFolders, uploadPDF } from "@/lib/drive";
 import { EmargementPDF } from "@/lib/pdf";
 import { sendEmail } from "@/lib/email";
-import { getFormateurs } from "@/lib/sheets";
+import { isTrue } from "@/lib/sheets-utils";
 
 const SHEET_02 = process.env.SHEET_02_ID!;
 const FORM_ID = process.env.FORM_EMARGEMENT_ID!;
 const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
 const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
-
-function isTrue(v: string | undefined) {
-  const l = (v ?? "").toLowerCase();
-  return l === "true" || l === "vrai";
-}
 
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
