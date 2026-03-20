@@ -68,17 +68,27 @@ export async function GET(req: NextRequest) {
 
     const today = new Date().toISOString().substring(0, 10);
 
-    // Write KPIs
+    // Write KPIs — match actual Sheet 03 kpi_id values
+    // KPI-006: Note satisfaction moyenne (/10)
+    // KPI-007: Taux de réponse satisfaction (%)
+    // KPI-008: Taux de complétion formations (%) — approx via emargement
+    // KPI-009: Taux d'assiduité moyen (%) — approx via emargement
+    // KPI-004: Non-conformités ouvertes (nombre) — use reclamations as proxy
+    const tauxReponseSat = inscriptions.length > 0
+      ? Math.round((satisfaction.length / inscriptions.length) * 100)
+      : 0;
+
     const kpis = [
-      { kpi_id: "SAT_MOY", valeur: satMoyenne },
-      { kpi_id: "TAUX_RECO", valeur: String(tauxRecommandation) },
-      { kpi_id: "REC_OUVERTES", valeur: String(recOuvertes) },
-      { kpi_id: "TAUX_EMARGEMENT", valeur: String(tauxEmargement) },
+      { kpi_id: "KPI-006", valeur: satMoyenne },
+      { kpi_id: "KPI-007", valeur: String(tauxReponseSat) },
+      { kpi_id: "KPI-008", valeur: String(tauxEmargement) },
+      { kpi_id: "KPI-009", valeur: String(tauxEmargement) },
+      { kpi_id: "KPI-004", valeur: String(recOuvertes) },
     ];
 
     for (const kpi of kpis) {
       try {
-        await updateCell(SHEET_03, "KPIs", "kpi_id", kpi.kpi_id, "valeur", kpi.valeur);
+        await updateCell(SHEET_03, "KPIs", "kpi_id", kpi.kpi_id, "valeur_actuelle", kpi.valeur);
         await updateCell(SHEET_03, "KPIs", "kpi_id", kpi.kpi_id, "date_maj", today);
       } catch {
         // KPI row may not exist, skip silently
