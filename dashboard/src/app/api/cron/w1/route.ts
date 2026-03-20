@@ -4,6 +4,7 @@ import { getSessions, getInscriptions, getApprenants, getOrganisme, getFormation
 import { updateSessionWorkflow, logJournal, appendRow } from "@/lib/sheets-write";
 import { sendEmail } from "@/lib/email";
 import { isTrue } from "@/lib/sheets-utils";
+import { w1Positionnement } from "@/lib/email-templates";
 
 export async function GET(req: NextRequest) {
   const authError = verifyCronAuth(req);
@@ -42,12 +43,7 @@ export async function GET(req: NextRequest) {
           await sendEmail(
             email,
             `Questionnaire de positionnement — ${formation.intitule || "Formation"}`,
-            `<p>Bonjour ${apprenant.prenom || ins.prenom || ""} ${apprenant.nom || ins.nom || ""},</p>
-            <p>Avant votre formation <strong>${formation.intitule || ""}</strong>, nous vous invitons à compléter un questionnaire de positionnement.</p>
-            <p style="text-align:center;margin:20px 0">
-              <a href="${formUrl}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Compléter le questionnaire</a>
-            </p>
-            <p>Cordialement,<br/>${organisme.nom || ""}</p>`
+            w1Positionnement(organisme, formation, session, apprenant.prenom || ins.prenom || "", apprenant.nom || ins.nom || "", formUrl)
           );
 
           await appendRow(SHEET_02, "Questionnaires_Envoyes", {

@@ -4,6 +4,7 @@ import { getSessions, getInscriptions, getApprenants, getOrganisme, getFormation
 import { updateSessionWorkflow, logJournal, appendRow } from "@/lib/sheets-write";
 import { sendEmail } from "@/lib/email";
 import { isTrue } from "@/lib/sheets-utils";
+import { w3SatisfactionEval } from "@/lib/email-templates";
 
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
@@ -50,13 +51,7 @@ export async function GET(req: NextRequest) {
           await sendEmail(
             email,
             `Évaluation & Satisfaction — ${formation.intitule || "Formation"}`,
-            `<p>Bonjour ${prenom} ${nom},</p>
-            <p>Votre formation <strong>${formation.intitule || ""}</strong> est terminée. Merci de compléter les deux questionnaires ci-dessous :</p>
-            <p style="text-align:center;margin:20px 0">
-              <a href="${satUrl}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin-right:10px">Questionnaire de satisfaction</a>
-              <a href="${evalUrl}" style="background:#10b981;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Évaluation des acquis</a>
-            </p>
-            <p>Cordialement,<br/>${organisme.nom || ""}</p>`
+            w3SatisfactionEval(organisme, formation, session, prenom, nom, satUrl, evalUrl)
           );
 
           const today = new Date().toISOString().substring(0, 10);

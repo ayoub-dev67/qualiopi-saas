@@ -5,6 +5,7 @@ import { updateSessionWorkflow, logJournal, appendRow } from "@/lib/sheets-write
 import { ensureSessionFolders, uploadPDF } from "@/lib/drive";
 import { AttestationPDF, CertificatRealisationPDF } from "@/lib/pdf";
 import { sendEmail } from "@/lib/email";
+import { w6SuiviFroid } from "@/lib/email-templates";
 
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
@@ -93,13 +94,7 @@ export async function GET(req: NextRequest) {
           await sendEmail(
             email,
             `Suivi à froid & Documents — ${formation.intitule || "Formation"}`,
-            `<p>Bonjour ${inscritData.prenom || ""} ${inscritData.nom || ""},</p>
-            <p>Cela fait quelques mois que vous avez terminé la formation <strong>${formation.intitule || ""}</strong>. Nous souhaiterions recueillir votre retour sur l'impact de cette formation dans votre activité professionnelle.</p>
-            <p style="text-align:center;margin:20px 0">
-              <a href="${formUrl}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Questionnaire de suivi à froid</a>
-            </p>
-            <p>Vous trouverez également en pièces jointes votre attestation de fin de formation et votre certificat de réalisation.</p>
-            <p>Cordialement,<br/>${organisme.nom || ""}</p>`,
+            w6SuiviFroid(organisme, formation, session, inscritData.prenom || "", inscritData.nom || "", formUrl),
             [
               { filename: `Attestation_${ins.inscription_id}.pdf`, content: attestBuf },
               { filename: `Certificat_${ins.inscription_id}.pdf`, content: certBuf },

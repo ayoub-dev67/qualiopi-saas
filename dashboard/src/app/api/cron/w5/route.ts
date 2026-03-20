@@ -3,6 +3,7 @@ import { verifyCronAuth } from "@/lib/cron-auth";
 import { getConfig, getOrganisme, getApprenants, getFormations, getSessions, getInscriptions } from "@/lib/sheets";
 import { updateCell, logJournal } from "@/lib/sheets-write";
 import { sendEmail } from "@/lib/email";
+import { w5Relance } from "@/lib/email-templates";
 
 // Fetch Questionnaires_Envoyes tab (not in the standard sheets.ts exports)
 async function getQuestionnairesEnvoyes(): Promise<Record<string, string>[]> {
@@ -104,31 +105,10 @@ export async function GET(req: NextRequest) {
         const nom = apprenant?.nom || ins?.nom || "";
         const typeLabel = (envoi.type ?? "questionnaire").replace(/_/g, " ");
 
-        const messages: Record<string, string> = {
-          amical: `<p>Bonjour ${prenom} ${nom},</p>
-            <p>Nous n'avons pas encore reçu votre réponse au questionnaire de ${typeLabel}. Pourriez-vous prendre quelques minutes pour le compléter ?</p>
-            <p style="text-align:center;margin:20px 0">
-              <a href="${formUrl}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Compléter le questionnaire</a>
-            </p>
-            <p>Merci par avance,<br/>${organisme.nom || ""}</p>`,
-          ferme: `<p>Bonjour ${prenom} ${nom},</p>
-            <p>Ceci est un rappel concernant le questionnaire de ${typeLabel} que nous vous avons envoyé. Votre retour est important pour la qualité de nos formations.</p>
-            <p style="text-align:center;margin:20px 0">
-              <a href="${formUrl}" style="background:#f59e0b;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Compléter maintenant</a>
-            </p>
-            <p>Cordialement,<br/>${organisme.nom || ""}</p>`,
-          dernier: `<p>Bonjour ${prenom} ${nom},</p>
-            <p><strong>Dernier rappel</strong> : nous n'avons toujours pas reçu votre réponse au questionnaire de ${typeLabel}. C'est notre dernier message à ce sujet.</p>
-            <p style="text-align:center;margin:20px 0">
-              <a href="${formUrl}" style="background:#ef4444;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Répondre maintenant</a>
-            </p>
-            <p>Cordialement,<br/>${organisme.nom || ""}</p>`,
-        };
-
         await sendEmail(
           email,
           `[Rappel] Questionnaire de ${typeLabel}`,
-          messages[ton] || messages.amical
+          w5Relance(organisme, prenom, nom, typeLabel, formUrl, ton as "amical" | "ferme" | "dernier")
         );
 
         // Update the envoi row — use inscription_id + type as composite key

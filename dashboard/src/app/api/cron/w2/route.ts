@@ -6,6 +6,7 @@ import { ensureSessionFolders, uploadPDF } from "@/lib/drive";
 import { EmargementPDF } from "@/lib/pdf";
 import { sendEmail } from "@/lib/email";
 import { isTrue } from "@/lib/sheets-utils";
+import { w2Emargement } from "@/lib/email-templates";
 
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
@@ -52,12 +53,7 @@ export async function GET(req: NextRequest) {
           await sendEmail(
             email,
             `Émargement — ${formation.intitule || "Formation"}`,
-            `<p>Bonjour ${apprenant.prenom || ""} ${apprenant.nom || ""},</p>
-            <p>Merci de signer votre feuille d'émargement pour la formation <strong>${formation.intitule || ""}</strong>.</p>
-            <p style="text-align:center;margin:20px 0">
-              <a href="${formUrl}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Signer l'émargement</a>
-            </p>
-            <p>Cordialement,<br/>${organisme.nom || ""}</p>`
+            w2Emargement(organisme, formation, session, apprenant.prenom || "", apprenant.nom || "", formUrl)
           );
 
           await appendRow(SHEET_02, "Questionnaires_Envoyes", {

@@ -3,6 +3,7 @@ import { verifyCronAuth } from "@/lib/cron-auth";
 import { getSessions, getInscriptions, getSatisfaction, getReclamations, getEmargement, getOrganisme, getConfig } from "@/lib/sheets";
 import { updateCell, logJournal } from "@/lib/sheets-write";
 import { sendEmail } from "@/lib/email";
+import { w4Reclamation, w4Rapport } from "@/lib/email-templates";
 
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
@@ -38,14 +39,7 @@ export async function GET(req: NextRequest) {
           await sendEmail(
             emailQualite,
             `[Réclamation] ${rec.objet || rec.reclamation_id}`,
-            `<p>Une nouvelle réclamation nécessite votre attention :</p>
-            <ul>
-              <li><strong>ID :</strong> ${rec.reclamation_id}</li>
-              <li><strong>Apprenant :</strong> ${rec.apprenant_id || "—"}</li>
-              <li><strong>Objet :</strong> ${rec.objet || "—"}</li>
-              <li><strong>Description :</strong> ${rec.description || "—"}</li>
-              <li><strong>Date :</strong> ${rec.date_reclamation || "—"}</li>
-            </ul>`
+            w4Reclamation(organisme, rec)
           );
         }
         processed++;
@@ -97,15 +91,7 @@ export async function GET(req: NextRequest) {
       await sendEmail(
         emailQualite,
         `[Rapport hebdo] Qualité — ${today}`,
-        `<h2>Rapport qualité hebdomadaire</h2>
-        <ul>
-          <li><strong>Sessions actives :</strong> ${sessionsActives}</li>
-          <li><strong>Satisfaction moyenne :</strong> ${satMoyenne}/10</li>
-          <li><strong>Taux de recommandation :</strong> ${tauxRecommandation}%</li>
-          <li><strong>Réclamations ouvertes :</strong> ${recOuvertes}</li>
-          <li><strong>Taux d'émargement :</strong> ${tauxEmargement}%</li>
-          <li><strong>Nouvelles réclamations traitées :</strong> ${nouvelles.length}</li>
-        </ul>`
+        w4Rapport(organisme, { sessionsActives, satMoyenne, tauxRecommandation, recOuvertes, tauxEmargement, nouvellesRec: nouvelles.length, date: today })
       );
     }
 

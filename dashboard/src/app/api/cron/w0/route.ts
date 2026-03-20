@@ -6,6 +6,7 @@ import { ensureSessionFolders, uploadPDF } from "@/lib/drive";
 import { ConventionPDF, ConvocationPDF } from "@/lib/pdf";
 import { sendEmail } from "@/lib/email";
 import { isTrue } from "@/lib/sheets-utils";
+import { w0Convocation } from "@/lib/email-templates";
 
 export async function GET(req: NextRequest) {
   const authError = verifyCronAuth(req);
@@ -50,9 +51,7 @@ export async function GET(req: NextRequest) {
             await sendEmail(
               inscritData.email,
               `Convocation — ${formation.intitule || "Formation"}`,
-              `<p>Bonjour ${inscritData.prenom || ""} ${inscritData.nom || ""},</p>
-              <p>Veuillez trouver ci-joint votre convocation pour la formation <strong>${formation.intitule || ""}</strong> du ${session.date_debut || ""} au ${session.date_fin || ""}.</p>
-              <p>Cordialement,<br/>${organisme.nom || ""}</p>`,
+              w0Convocation(organisme, formation, session, inscritData),
               [{ filename: `Convocation_${ins.inscription_id}.pdf`, content: convocBuf }]
             );
           }
