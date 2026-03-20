@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { href: "/", label: "Vue d'ensemble", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Vue d'ensemble", icon: LayoutDashboard },
   { href: "/sessions", label: "Sessions", icon: CalendarDays },
   { href: "/conformite", label: "Conformité", icon: Shield },
   { href: "/financier", label: "Financier", icon: DollarSign },
@@ -66,7 +66,7 @@ export default function Sidebar({ orgName, orgNda, alertCount = 0, serverTime }:
       {/* Nav */}
       <nav className="flex-1 px-2 lg:px-3 space-y-1 overflow-y-auto">
         {NAV.map(({ href, label, icon: Icon }) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const active = href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
           const isAlertes = href === "/alertes";
           return (
             <Link

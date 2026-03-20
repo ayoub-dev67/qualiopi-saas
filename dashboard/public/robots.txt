@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /sessions
+Disallow: /api/
+Sitemap: https://qualiopi-dashboard.vercel.app/sitemap.xml

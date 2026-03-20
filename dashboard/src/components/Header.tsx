@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { RotateCw, Plus } from "lucide-react";
 
 const TITLES: Record<string, string> = {
-  "/": "Vue d'ensemble",
+  "/dashboard": "Vue d'ensemble",
   "/sessions": "Sessions",
   "/conformite": "Conformité Qualiopi",
   "/financier": "Financier",
