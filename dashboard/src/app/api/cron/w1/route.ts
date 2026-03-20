@@ -5,14 +5,14 @@ import { updateSessionWorkflow, logJournal, appendRow } from "@/lib/sheets-write
 import { sendEmail } from "@/lib/email";
 import { isTrue } from "@/lib/sheets-utils";
 
-const SHEET_02 = process.env.SHEET_02_ID!;
-const FORM_ID = process.env.FORM_POSITIONNEMENT_ID!;
-const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
-const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
-
 export async function GET(req: NextRequest) {
   const authError = verifyCronAuth(req);
   if (authError) return authError;
+
+  const SHEET_02 = process.env.SHEET_02_ID!;
+  const FORM_ID = process.env.FORM_POSITIONNEMENT_ID!;
+  const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
+  const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
 
   const errors: string[] = [];
   let processed = 0;

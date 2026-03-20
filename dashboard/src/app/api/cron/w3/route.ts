@@ -5,12 +5,6 @@ import { updateSessionWorkflow, logJournal, appendRow } from "@/lib/sheets-write
 import { sendEmail } from "@/lib/email";
 import { isTrue } from "@/lib/sheets-utils";
 
-const SHEET_02 = process.env.SHEET_02_ID!;
-const FORM_SAT = process.env.FORM_SATISFACTION_ID!;
-const FORM_EVAL = process.env.FORM_EVALUATION_ID!;
-const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
-const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
-
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
 }
@@ -18,6 +12,12 @@ function norm(s: string) {
 export async function GET(req: NextRequest) {
   const authError = verifyCronAuth(req);
   if (authError) return authError;
+
+  const SHEET_02 = process.env.SHEET_02_ID!;
+  const FORM_SAT = process.env.FORM_SATISFACTION_ID!;
+  const FORM_EVAL = process.env.FORM_EVALUATION_ID!;
+  const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
+  const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
 
   const errors: string[] = [];
   let processed = 0;

@@ -6,11 +6,6 @@ import { ensureSessionFolders, uploadPDF } from "@/lib/drive";
 import { AttestationPDF, CertificatRealisationPDF } from "@/lib/pdf";
 import { sendEmail } from "@/lib/email";
 
-const SHEET_02 = process.env.SHEET_02_ID!;
-const FORM_SUIVI_FROID = process.env.FORM_SUIVI_FROID_ID!;
-const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
-const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
-
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
 }
@@ -24,6 +19,7 @@ function daysSince(dateStr: string): number {
 // Check if suivi froid was already sent for this session
 async function getSuiviFroidEnvoyes(): Promise<Record<string, string>[]> {
   const API_KEY = process.env.GOOGLE_API_KEY!;
+  const SHEET_02 = process.env.SHEET_02_ID!;
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_02}/values/${encodeURIComponent("Questionnaires_Envoyes")}?key=${API_KEY}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return [];
@@ -43,6 +39,11 @@ async function getSuiviFroidEnvoyes(): Promise<Record<string, string>[]> {
 export async function GET(req: NextRequest) {
   const authError = verifyCronAuth(req);
   if (authError) return authError;
+
+  const SHEET_02 = process.env.SHEET_02_ID!;
+  const FORM_SUIVI_FROID = process.env.FORM_SUIVI_FROID_ID!;
+  const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
+  const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
 
   const errors: string[] = [];
   let processed = 0;

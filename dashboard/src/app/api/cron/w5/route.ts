@@ -4,24 +4,10 @@ import { getConfig, getOrganisme, getApprenants, getFormations, getSessions, get
 import { updateCell, logJournal } from "@/lib/sheets-write";
 import { sendEmail } from "@/lib/email";
 
-const SHEET_02 = process.env.SHEET_02_ID!;
-const FORM_POSITIONNEMENT = process.env.FORM_POSITIONNEMENT_ID!;
-const FORM_EMARGEMENT = process.env.FORM_EMARGEMENT_ID!;
-const FORM_SATISFACTION = process.env.FORM_SATISFACTION_ID!;
-const FORM_EVALUATION = process.env.FORM_EVALUATION_ID!;
-const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
-const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
-
-const FORM_MAP: Record<string, string> = {
-  positionnement: FORM_POSITIONNEMENT,
-  emargement: FORM_EMARGEMENT,
-  satisfaction: FORM_SATISFACTION,
-  evaluation: FORM_EVALUATION,
-};
-
 // Fetch Questionnaires_Envoyes tab (not in the standard sheets.ts exports)
 async function getQuestionnairesEnvoyes(): Promise<Record<string, string>[]> {
   const API_KEY = process.env.GOOGLE_API_KEY!;
+  const SHEET_02 = process.env.SHEET_02_ID!;
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_02}/values/${encodeURIComponent("Questionnaires_Envoyes")}?key=${API_KEY}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return [];
@@ -45,6 +31,17 @@ function daysDiff(dateStr: string): number {
 export async function GET(req: NextRequest) {
   const authError = verifyCronAuth(req);
   if (authError) return authError;
+
+  const SHEET_02 = process.env.SHEET_02_ID!;
+  const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
+  const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
+
+  const FORM_MAP: Record<string, string> = {
+    positionnement: process.env.FORM_POSITIONNEMENT_ID!,
+    emargement: process.env.FORM_EMARGEMENT_ID!,
+    satisfaction: process.env.FORM_SATISFACTION_ID!,
+    evaluation: process.env.FORM_EVALUATION_ID!,
+  };
 
   const errors: string[] = [];
   let processed = 0;

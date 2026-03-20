@@ -4,9 +4,6 @@ import { getSessions, getInscriptions, getSatisfaction, getReclamations, getEmar
 import { updateCell, logJournal } from "@/lib/sheets-write";
 import { sendEmail } from "@/lib/email";
 
-const SHEET_02 = process.env.SHEET_02_ID!;
-const SHEET_03 = process.env.SHEET_03_ID!;
-
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
 }
@@ -14,6 +11,9 @@ function norm(s: string) {
 export async function GET(req: NextRequest) {
   const authError = verifyCronAuth(req);
   if (authError) return authError;
+
+  const SHEET_02 = process.env.SHEET_02_ID!;
+  const SHEET_03 = process.env.SHEET_03_ID!;
 
   const errors: string[] = [];
   let processed = 0;
