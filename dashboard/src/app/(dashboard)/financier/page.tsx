@@ -1,4 +1,4 @@
-import { getFinancier } from "@/lib/sheets";
+import { getFactures } from "@/lib/db";
 import { DollarSign, Receipt, TrendingUp, FileText } from "lucide-react";
 import KPICard from "@/components/KPICard";
 import DataTable from "@/components/DataTable";
@@ -14,14 +14,10 @@ const PAIEMENT_STYLES: Record<string, { bg: string; text: string; label: string 
   annulee:        { bg: "#1e293b", text: "#94a3b8", label: "ANNULÉE" },
 };
 
-function normalizeStr(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
-}
-
 export default async function FinancierPage() {
-  const financier = await getFinancier();
+  const factures = await getFactures();
 
-  if (financier.length === 0) {
+  if (factures.length === 0) {
     return (
       <div className="space-y-6">
         <div className="glass-card p-12 flex flex-col items-center text-center">
@@ -43,34 +39,33 @@ export default async function FinancierPage() {
   }
 
   // KPIs
-  const totalEncaisse = financier.reduce(
-    (sum, f) => sum + (parseFloat(f.montant_encaisse) || 0),
+  const totalEncaisse = factures.reduce(
+    (sum, f) => sum + (f.montant_encaisse ?? 0),
     0
   );
-  const totalFacture = financier.reduce(
-    (sum, f) => sum + (parseFloat(f.montant_facture) || 0),
+  const totalFacture = factures.reduce(
+    (sum, f) => sum + (f.montant_facture ?? 0),
     0
   );
-  const totalPrevu = financier.reduce(
-    (sum, f) => sum + (parseFloat(f.montant_prevu) || 0),
+  const totalPrevu = factures.reduce(
+    (sum, f) => sum + (f.montant_prevu ?? 0),
     0
   );
-  const enAttente = financier.filter((f) => {
-    const st = normalizeStr(f.statut_paiement ?? "");
-    return ["en_attente", "emise", "facturee"].includes(st);
-  }).length;
+  const enAttente = factures.filter((f) =>
+    ["en_attente", "emise", "facturee"].includes(f.statut_paiement)
+  ).length;
   const tauxEncaissement =
     totalFacture > 0 ? Math.round((totalEncaisse / totalFacture) * 100) : 0;
 
   // Chart — aggregate by month from date_facture
   const byMonth = new Map<string, { prevu: number; facture: number; encaisse: number }>();
-  for (const f of financier) {
+  for (const f of factures) {
     const date = f.date_facture || "";
     const month = date.length >= 7 ? date.substring(0, 7) : "N/A";
     const entry = byMonth.get(month) ?? { prevu: 0, facture: 0, encaisse: 0 };
-    entry.prevu += parseFloat(f.montant_prevu) || 0;
-    entry.facture += parseFloat(f.montant_facture) || 0;
-    entry.encaisse += parseFloat(f.montant_encaisse) || 0;
+    entry.prevu += f.montant_prevu ?? 0;
+    entry.facture += f.montant_facture ?? 0;
+    entry.encaisse += f.montant_encaisse ?? 0;
     byMonth.set(month, entry);
   }
   const chartData = Array.from(byMonth.entries())
@@ -78,24 +73,22 @@ export default async function FinancierPage() {
     .map(([month, data]) => ({ month, ...data }));
 
   // Table
-  const tableRows = financier.map((f) => {
-    const st = normalizeStr(f.statut_paiement ?? "");
-    const style = PAIEMENT_STYLES[st] ?? PAIEMENT_STYLES.en_attente;
+  const tableRows = factures.map((f) => {
+    const style = PAIEMENT_STYLES[f.statut_paiement] ?? PAIEMENT_STYLES.en_attente;
     return [
       <span key="id" className="font-mono text-indigo-400 text-xs">
-        {f.facture_id}
+        {f.ref}
       </span>,
-      <span key="s" className="text-xs">{f.session_id}</span>,
-      <span key="e" className="text-xs">{f.entreprise || "—"}</span>,
+      <span key="s" className="text-xs">{f.entreprise || "—"}</span>,
       <span key="t" className="text-xs">{f.type_financement || "—"}</span>,
       <span key="mp" className="text-xs font-mono">
-        {(parseFloat(f.montant_prevu) || 0).toLocaleString("fr-FR")} €
+        {(f.montant_prevu ?? 0).toLocaleString("fr-FR")} €
       </span>,
       <span key="mf" className="text-xs font-mono">
-        {(parseFloat(f.montant_facture) || 0).toLocaleString("fr-FR")} €
+        {(f.montant_facture ?? 0).toLocaleString("fr-FR")} €
       </span>,
       <span key="me" className="text-xs font-mono text-emerald-400">
-        {(parseFloat(f.montant_encaisse) || 0).toLocaleString("fr-FR")} €
+        {(f.montant_encaisse ?? 0).toLocaleString("fr-FR")} €
       </span>,
       <span
         key="st"
@@ -143,7 +136,7 @@ export default async function FinancierPage() {
 
       {/* Table */}
       <DataTable
-        headers={["Facture", "Session", "Entreprise", "Financement", "Prévu", "Facturé", "Encaissé", "Statut"]}
+        headers={["Facture", "Entreprise", "Financement", "Prévu", "Facturé", "Encaissé", "Statut"]}
         rows={tableRows}
         emptyIcon={Receipt}
         emptyTitle="Aucune facture"

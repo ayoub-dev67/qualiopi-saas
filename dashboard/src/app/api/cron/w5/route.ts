@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyCronAuth } from "@/lib/cron-auth";
-import { getConfig, getOrganisme, getApprenants, getFormations, getSessions, getInscriptions } from "@/lib/sheets";
-import { updateCell, logJournal } from "@/lib/sheets-write";
+import { createAdminClient } from "@/lib/supabase";
 import { sendEmail } from "@/lib/email";
 import { w5Relance } from "@/lib/email-templates";
-
-// Fetch Questionnaires_Envoyes tab (not in the standard sheets.ts exports)
-async function getQuestionnairesEnvoyes(): Promise<Record<string, string>[]> {
-  const API_KEY = process.env.GOOGLE_API_KEY!;
-  const SHEET_02 = process.env.SHEET_02_ID!;
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_02}/values/${encodeURIComponent("Questionnaires_Envoyes")}?key=${API_KEY}`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) return [];
-  const data = await res.json();
-  const rows: string[][] = data.values ?? [];
-  if (rows.length < 2) return [];
-  const headers = rows[0];
-  return rows.slice(1).map((row) => {
-    const obj: Record<string, string> = {};
-    headers.forEach((h, i) => { obj[h] = row[i] ?? ""; });
-    return obj;
-  });
-}
 
 function daysDiff(dateStr: string): number {
   const d = new Date(dateStr);
@@ -30,103 +10,118 @@ function daysDiff(dateStr: string): number {
 }
 
 export async function GET(req: NextRequest) {
-  const authError = verifyCronAuth(req);
-  if (authError) return authError;
+  const authHeader = req.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const SHEET_02 = process.env.SHEET_02_ID!;
-  const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
-  const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
-
-  const FORM_MAP: Record<string, string> = {
-    positionnement: process.env.FORM_POSITIONNEMENT_ID!,
-    emargement: process.env.FORM_EMARGEMENT_ID!,
-    satisfaction: process.env.FORM_SATISFACTION_ID!,
-    evaluation: process.env.FORM_EVALUATION_ID!,
-  };
-
+  const admin = createAdminClient();
   const errors: string[] = [];
   let processed = 0;
+  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com";
 
   try {
-    const [config, organismeRows, apprenants, inscriptions, envois] =
-      await Promise.all([getConfig(), getOrganisme(), getApprenants(), getInscriptions(), getQuestionnairesEnvoyes()]);
+    // Get all orgs
+    const { data: orgs } = await admin.from("organizations").select("*");
 
-    const organisme = organismeRows[0] ?? {};
-    const delai1 = parseInt(config.find((c) => c.cle === "delai_relance_1")?.valeur ?? "2", 10);
-    const delai2 = parseInt(config.find((c) => c.cle === "delai_relance_2")?.valeur ?? "5", 10);
-    const delai3 = parseInt(config.find((c) => c.cle === "delai_relance_3")?.valeur ?? "10", 10);
-
-    const today = new Date().toISOString().substring(0, 10);
-
-    // Filter envois that are pending (not completed)
-    const pending = envois.filter((e) => {
-      const st = e.statut ?? "";
-      return ["envoye", "relance_1", "relance_2"].includes(st);
-    });
-
-    for (const envoi of pending) {
+    for (const org of orgs ?? []) {
       try {
-        const dateRef = envoi.date_derniere_relance || envoi.date_envoi || "";
-        if (!dateRef) continue;
-        const days = daysDiff(dateRef);
-        const currentStatut = envoi.statut ?? "";
+        // ── 1. Read config for relay delays ──
+        const { data: configRows } = await admin
+          .from("config")
+          .select("*")
+          .eq("org_id", org.id);
+        const configMap = new Map((configRows ?? []).map((c) => [c.parametre, c.valeur]));
 
-        let nextStatut = "";
-        let delai = 0;
-        let ton = "";
+        const delai1 = parseInt(configMap.get("delai_relance_1") ?? "2", 10);
+        const delai2 = parseInt(configMap.get("delai_relance_2") ?? "5", 10);
+        const delai3 = parseInt(configMap.get("delai_relance_3") ?? "10", 10);
 
-        if (currentStatut === "envoye" && days >= delai1) {
-          nextStatut = "relance_1";
-          delai = delai1;
-          ton = "amical";
-        } else if (currentStatut === "relance_1" && days >= delai2) {
-          nextStatut = "relance_2";
-          delai = delai2;
-          ton = "ferme";
-        } else if (currentStatut === "relance_2" && days >= delai3) {
-          nextStatut = "relance_3";
-          delai = delai3;
-          ton = "dernier";
+        const today = new Date().toISOString().substring(0, 10);
+
+        // ── 2. Query pending questionnaires ──
+        const { data: pending } = await admin
+          .from("questionnaires_envoyes")
+          .select("*, inscriptions(*, apprenants(*))")
+          .eq("org_id", org.id)
+          .in("statut", ["envoye", "relance_1", "relance_2"]);
+
+        for (const envoi of pending ?? []) {
+          try {
+            const dateRef = envoi.date_derniere_relance || envoi.date_envoi;
+            if (!dateRef) continue;
+            const days = daysDiff(dateRef);
+            const currentStatut = envoi.statut;
+
+            let nextStatut: "relance_1" | "relance_2" | "relance_3" | "" = "";
+            let ton: "amical" | "ferme" | "dernier" = "amical";
+
+            if (currentStatut === "envoye" && days >= delai1) {
+              nextStatut = "relance_1";
+              ton = "amical";
+            } else if (currentStatut === "relance_1" && days >= delai2) {
+              nextStatut = "relance_2";
+              ton = "ferme";
+            } else if (currentStatut === "relance_2" && days >= delai3) {
+              nextStatut = "relance_3";
+              ton = "dernier";
+            }
+
+            if (!nextStatut) continue;
+
+            // Get apprenant email from joined data
+            const inscription = envoi.inscriptions as Record<string, unknown> | null;
+            const apprenant = (inscription as Record<string, unknown>)?.apprenants as Record<string, unknown> | null;
+            const email = (apprenant?.email as string) || "";
+            if (!email) continue;
+
+            const prenom = (apprenant?.prenom as string) || "";
+            const nom = (apprenant?.nom as string) || "";
+            const typeLabel = (envoi.type ?? "questionnaire").replace(/_/g, " ");
+
+            // ── 3. Build form URL using token ──
+            const formUrl = `${BASE_URL}/forms/${envoi.type}?token=${envoi.token}`;
+
+            await sendEmail(
+              email,
+              `[Rappel] Questionnaire de ${typeLabel}`,
+              w5Relance(
+                { nom: org.nom, email: org.email_contact || "", telephone: org.telephone || "", adresse: org.adresse || "" },
+                prenom,
+                nom,
+                typeLabel,
+                formUrl,
+                ton
+              )
+            );
+
+            // ── Update statut and nb_relances ──
+            await admin
+              .from("questionnaires_envoyes")
+              .update({
+                statut: nextStatut,
+                nb_relances: envoi.nb_relances + 1,
+                date_derniere_relance: today,
+              })
+              .eq("id", envoi.id);
+
+            processed++;
+          } catch (err) {
+            errors.push(`${envoi.id}: ${err instanceof Error ? err.message : String(err)}`);
+          }
         }
 
-        if (!nextStatut) continue;
-
-        const ins = inscriptions.find((i) => i.inscription_id === envoi.inscription_id);
-        const apprenant = apprenants.find((a) => a.apprenant_id === (ins?.apprenant_id ?? ""));
-        const email = apprenant?.email || ins?.email;
-        if (!email) continue;
-
-        const formId = FORM_MAP[envoi.type ?? ""] || "";
-        const formUrl = formId
-          ? `https://docs.google.com/forms/d/${formId}/viewform?usp=pp_url&entry.${ENTRY_INS}=${envoi.inscription_id}&entry.${ENTRY_SES}=${envoi.session_id}`
-          : "#";
-
-        const prenom = apprenant?.prenom || ins?.prenom || "";
-        const nom = apprenant?.nom || ins?.nom || "";
-        const typeLabel = (envoi.type ?? "questionnaire").replace(/_/g, " ");
-
-        await sendEmail(
-          email,
-          `[Rappel] Questionnaire de ${typeLabel}`,
-          w5Relance(organisme, prenom, nom, typeLabel, formUrl, ton as "amical" | "ferme" | "dernier")
-        );
-
-        // Update the envoi row — use inscription_id + type as composite key
-        // We need row-level update, so use a manual approach
-        const nbRelances = parseInt(envoi.nb_relances ?? "0", 10) + 1;
-
-        // Update statut
-        await updateCell(SHEET_02, "Questionnaires_Envoyes", "inscription_id", envoi.inscription_id, "statut", nextStatut);
-        await updateCell(SHEET_02, "Questionnaires_Envoyes", "inscription_id", envoi.inscription_id, "nb_relances", String(nbRelances));
-        await updateCell(SHEET_02, "Questionnaires_Envoyes", "inscription_id", envoi.inscription_id, "date_derniere_relance", today);
-
-        processed++;
+        // ── Log journal ──
+        await admin.from("journal_systeme").insert({
+          org_id: org.id,
+          workflow: "W5",
+          statut: "OK",
+          message: `Relances : ${processed} email(s) envoye(s)`,
+        });
       } catch (err) {
-        errors.push(`${envoi.inscription_id}: ${err instanceof Error ? err.message : String(err)}`);
+        errors.push(`Org ${org.id}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
-
-    await logJournal("W5", "", "succes", `Relances : ${processed} email(s) envoyé(s)`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });

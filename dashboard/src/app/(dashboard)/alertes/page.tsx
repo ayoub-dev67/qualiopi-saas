@@ -5,18 +5,9 @@ import {
   getInscriptions,
   getSatisfaction,
   getSuiviFroid,
-} from "@/lib/sheets";
+} from "@/lib/db";
 import { AlertTriangle, AlertOctagon, Info, CheckCircle2 } from "lucide-react";
 import KPICard from "@/components/KPICard";
-
-function normalizeStatus(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
-}
-
-function isTrue(v: string | undefined): boolean {
-  const lower = (v ?? "").toLowerCase();
-  return lower === "true" || lower === "vrai";
-}
 
 type AlertLevel = "danger" | "warning" | "info";
 
@@ -50,15 +41,15 @@ export default async function AlertesPage() {
 
   // DANGER — Session planifiée avec date_debut dans moins de 3 jours et workflow_0_ok=false
   const sessionsPlanifiees = sessions.filter(
-    (s) => normalizeStatus(s.statut ?? "") === "planifiee"
+    (s) => s.statut === "planifiee"
   );
   for (const s of sessionsPlanifiees) {
-    if (!isTrue(s.workflow_0_ok) && s.date_debut) {
+    if (!s.workflow_0_ok && s.date_debut) {
       const daysUntil = -daysBetween(s.date_debut, now);
       if (daysUntil >= 0 && daysUntil <= 3) {
         alertes.push({
           level: "danger",
-          message: `Session ${s.session_id} commence dans ${daysUntil === 0 ? "aujourd'hui" : `${daysUntil}j`} — setup non effectué (WF0)`,
+          message: `Session ${s.ref} commence dans ${daysUntil === 0 ? "aujourd'hui" : `${daysUntil}j`} — setup non effectué (WF0)`,
           source: "Sessions",
           timestamp: s.date_debut,
         });
@@ -68,13 +59,13 @@ export default async function AlertesPage() {
 
   // DANGER — Sessions en cours avec workflows incomplets
   const sessionsEnCours = sessions.filter(
-    (s) => normalizeStatus(s.statut ?? "") === "en_cours"
+    (s) => s.statut === "en_cours"
   );
   for (const s of sessionsEnCours) {
-    if (!isTrue(s.workflow_2_ok)) {
+    if (!s.workflow_2_ok) {
       alertes.push({
         level: "danger",
-        message: `Session ${s.session_id} en cours : émargement non lancé (WF2)`,
+        message: `Session ${s.ref} en cours : émargement non lancé (WF2)`,
         source: "Workflows",
         timestamp: s.date_debut || "—",
       });
@@ -83,13 +74,13 @@ export default async function AlertesPage() {
 
   // DANGER — Sessions terminées avec WF3 incomplet
   const sessionsTerminees = sessions.filter(
-    (s) => normalizeStatus(s.statut ?? "") === "terminee"
+    (s) => s.statut === "terminee"
   );
   for (const s of sessionsTerminees) {
-    if (!isTrue(s.workflow_3_ok)) {
+    if (!s.workflow_3_ok) {
       alertes.push({
         level: "danger",
-        message: `Session ${s.session_id} terminée : satisfaction/évaluation non envoyée (WF3)`,
+        message: `Session ${s.ref} terminée : satisfaction/évaluation non envoyée (WF3)`,
         source: "Workflows",
         timestamp: s.date_fin || s.date_debut || "—",
       });
@@ -98,37 +89,36 @@ export default async function AlertesPage() {
 
   // DANGER — Formateurs sans dossier complet
   const formateursIncomplets = formateurs.filter(
-    (f) => !isTrue(f.dossier_complet)
+    (f) => !f.dossier_complet
   );
   for (const f of formateursIncomplets) {
     alertes.push({
       level: "danger",
-      message: `Formateur ${f.prenom ?? ""} ${f.nom ?? ""} (${f.formateur_id}) : dossier incomplet`,
+      message: `Formateur ${f.prenom ?? ""} ${f.nom ?? ""} (${f.ref}) : dossier incomplet`,
       source: "Formateurs",
-      timestamp: f.date_creation || "—",
+      timestamp: f.created_at?.substring(0, 10) || "—",
     });
   }
 
   // WARNING — Réclamations non traitées
   const recNonTraitees = reclamations.filter(
-    (r) =>
-      !["traitee", "resolue", "cloturee"].includes(normalizeStatus(r.statut ?? ""))
+    (r) => !["traitee", "fermee"].includes(r.statut)
   );
   for (const r of recNonTraitees) {
     alertes.push({
       level: "warning",
-      message: `Réclamation ${r.reclamation_id} : "${r.objet || "sans objet"}" — ${r.gravite || "gravité inconnue"}`,
+      message: `Réclamation : "${r.objet || "sans objet"}" — ${r.gravite || "gravité inconnue"}`,
       source: "Réclamations",
-      timestamp: r.date_reclamation || "—",
+      timestamp: r.created_at?.substring(0, 10) || "—",
     });
   }
 
-  // WARNING — Relances: inscriptions sans retour satisfaction
+  // WARNING — Inscriptions without satisfaction response
+  const sessionsSatIds = new Set(satisfaction.map((s) => s.session_id));
   const inscrSansSat = inscriptions.filter(
     (i) =>
-      !isTrue(i.satisfaction_repondue) &&
-      i.statut &&
-      normalizeStatus(i.statut) !== "annulee"
+      i.statut !== "annule" &&
+      !sessionsSatIds.has(i.session_id)
   );
   if (inscrSansSat.length > 0) {
     alertes.push({
@@ -144,7 +134,7 @@ export default async function AlertesPage() {
     suiviFroid.map((sf) => sf.session_id).filter(Boolean)
   );
   const eligibleSuiviFroid = sessionsTerminees.filter((s) => {
-    if (suiviFroidEnvoyes.has(s.session_id)) return false;
+    if (suiviFroidEnvoyes.has(s.id)) return false;
     const d = s.date_fin || s.date_debut || "";
     const days = daysBetween(d, now);
     return days >= 150;
@@ -160,8 +150,8 @@ export default async function AlertesPage() {
 
   // INFO — Satisfaction moyenne
   const satNotes = satisfaction
-    .map((s) => parseFloat(s.note_globale))
-    .filter((n) => !isNaN(n));
+    .map((s) => s.note_globale)
+    .filter((n): n is number => n != null && !isNaN(n));
   if (satNotes.length > 0) {
     const moy = (satNotes.reduce((a, b) => a + b, 0) / satNotes.length).toFixed(1);
     alertes.push({

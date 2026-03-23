@@ -1,14 +1,10 @@
-import { getSessions, getFormations, getFormateurs } from "@/lib/sheets";
+import { getSessions } from "@/lib/db";
 import Link from "next/link";
 import { CalendarDays, PlayCircle, CheckCircle2, XCircle, Search } from "lucide-react";
 import KPICard from "@/components/KPICard";
 import StatusBadge from "@/components/StatusBadge";
 import WorkflowDot from "@/components/WorkflowDot";
 import DataTable from "@/components/DataTable";
-
-function normalizeStatus(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
-}
 
 function fmtDate(d: string): string {
   if (d.length >= 10) {
@@ -19,21 +15,12 @@ function fmtDate(d: string): string {
 }
 
 export default async function SessionsPage() {
-  const [sessions, formations, formateurs] = await Promise.all([
-    getSessions(),
-    getFormations(),
-    getFormateurs(),
-  ]);
-
-  const formationMap = new Map(formations.map((f) => [f.formation_id, f.intitule]));
-  const formateurMap = new Map(
-    formateurs.map((f) => [f.formateur_id, `${f.prenom ?? ""} ${f.nom ?? ""}`.trim()])
-  );
+  const sessions = await getSessions();
 
   // Counts
   const counts = { planifiee: 0, en_cours: 0, terminee: 0, annulee: 0 };
   for (const s of sessions) {
-    const st = normalizeStatus(s.statut ?? "");
+    const st = s.statut;
     if (st in counts) counts[st as keyof typeof counts]++;
   }
 
@@ -46,17 +33,17 @@ export default async function SessionsPage() {
 
   // Table rows
   const tableRows = sessions.map((s) => {
-    const nbInscrits = parseInt(s.nb_inscrits ?? "0") || 0;
-    const nbPlaces = parseInt(s.nombre_places ?? "0") || 1;
+    const nbInscrits = s.nb_inscrits ?? 0;
+    const nbPlaces = s.nombre_places ?? 1;
     const pctFill = Math.min(100, Math.round((nbInscrits / nbPlaces) * 100));
 
     return [
       // Session ID — hover underline
-      <Link key="id" href={`/sessions/${s.session_id}`} className="font-mono text-indigo-400 text-xs hover:underline cursor-pointer">{s.session_id}</Link>,
+      <Link key="id" href={`/sessions/${s.id}`} className="font-mono text-indigo-400 text-xs hover:underline cursor-pointer">{s.ref}</Link>,
       // Formation
-      <span key="f" className="text-sm">{formationMap.get(s.formation_id) ?? s.formation_id}</span>,
+      <span key="f" className="text-sm">{s.formations.intitule}</span>,
       // Formateur
-      <span key="fm" className="text-sm">{formateurMap.get(s.formateur_id) ?? s.formateur_id}</span>,
+      <span key="fm" className="text-sm">{`${s.formateurs.prenom} ${s.formateurs.nom}`.trim()}</span>,
       // Dates (DD/MM format)
       <span key="d" className="text-xs whitespace-nowrap">
         {fmtDate(s.date_debut ?? "")}{s.date_fin ? ` → ${fmtDate(s.date_fin)}` : ""}
@@ -79,13 +66,13 @@ export default async function SessionsPage() {
         </span>
       </div>,
       // Statut
-      <StatusBadge key="st" status={s.statut ?? "planifiee"} />,
+      <StatusBadge key="st" status={s.statut} />,
       // Workflows
       <div key="wf" className="flex items-center gap-1.5">
-        <WorkflowDot done={s.workflow_0_ok === "TRUE" || s.workflow_0_ok === "true"} />
-        <WorkflowDot done={s.workflow_1_ok === "TRUE" || s.workflow_1_ok === "true"} />
-        <WorkflowDot done={s.workflow_2_ok === "TRUE" || s.workflow_2_ok === "true"} />
-        <WorkflowDot done={s.workflow_3_ok === "TRUE" || s.workflow_3_ok === "true"} />
+        <WorkflowDot done={s.workflow_0_ok} />
+        <WorkflowDot done={s.workflow_1_ok} />
+        <WorkflowDot done={s.workflow_2_ok} />
+        <WorkflowDot done={s.workflow_3_ok} />
       </div>,
     ];
   });

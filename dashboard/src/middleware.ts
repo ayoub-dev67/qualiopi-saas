@@ -1,45 +1,55 @@
-import { auth } from "@/lib/auth";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-export default auth((req) => {
+const PUBLIC_PATHS = [
+  "/", "/pricing", "/contact", "/demo", "/login", "/signup", "/success",
+];
+
+const PUBLIC_PREFIXES = [
+  "/api/cron/", "/api/stripe/webhook", "/api/public/", "/api/seed", "/api/contact",
+  "/_next/", "/favicon.ico", "/images/", "/fonts/", "/forms/",
+];
+
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Public paths that don't need auth
-  const publicPaths = [
-    "/",
-    "/pricing",
-    "/contact",
-    "/demo",
-    "/login",
-    "/signup",
-    "/success",
-  ];
+  // Allow public paths
+  if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
+  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
-  const publicPrefixes = [
-    "/api/cron/",
-    "/api/auth/",
-    "/api/stripe/",
-    "/api/seed",
-    "/api/contact",
-    "/api/test",
-    "/api/setup-tab",
-    "/_next/",
-    "/favicon.ico",
-    "/images/",
-    "/fonts/",
-  ];
+  // Create Supabase client in middleware to refresh session
+  let response = NextResponse.next({ request: req });
 
-  const isPublic = publicPaths.includes(pathname) ||
-    publicPrefixes.some((p) => pathname.startsWith(p));
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            req.cookies.set(name, value);
+            response = NextResponse.next({ request: req });
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
 
-  if (isPublic) return;
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!req.auth) {
+  if (!user) {
     const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return Response.redirect(loginUrl);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
   }
-});
+
+  return response;
+}
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|images|fonts).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

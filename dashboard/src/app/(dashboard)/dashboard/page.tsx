@@ -3,11 +3,12 @@ import {
   getInscriptions,
   getSatisfaction,
   getReclamations,
-  getOrganisme,
+  getOrganization,
   getFormations,
   getFormateurs,
   getJournal,
-} from "@/lib/sheets";
+  getQualiopiScore,
+} from "@/lib/db";
 import { CalendarDays, Users, Star, Shield, Clock, Activity, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import KPICard from "@/components/KPICard";
@@ -15,91 +16,60 @@ import StatusBadge from "@/components/StatusBadge";
 import SatisfactionChart from "@/components/charts/SatisfactionChart";
 import QualiopiScore from "@/components/charts/QualiopiScore";
 
-function normalizeStatus(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
-}
-
 const MOIS_COURT = ["janv.", "fév.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
-/** Format "2026-02-27" + "20:06:00" → "27 fév. à 20:06" */
-function fmtJournalDate(date: string, heure?: string): string {
-  if (!date || date === "—") return "—";
-  const parts = date.substring(0, 10).split("-");
-  if (parts.length !== 3) return date;
-  const day = parseInt(parts[2], 10);
-  const month = parseInt(parts[1], 10) - 1;
-  if (isNaN(day) || isNaN(month) || month < 0 || month > 11) return date;
-  const timeStr = heure ? ` à ${heure.substring(0, 5)}` : "";
-  return `${day} ${MOIS_COURT[month]}${timeStr}`;
+/** Format ISO string (e.g. "2026-02-27T20:06:00Z") → "27 fév. à 20:06" */
+function fmtJournalDate(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const day = d.getDate();
+  const month = d.getMonth();
+  const hours = d.getHours().toString().padStart(2, "0");
+  const minutes = d.getMinutes().toString().padStart(2, "0");
+  return `${day} ${MOIS_COURT[month]} à ${hours}:${minutes}`;
 }
 
 export default async function HomePage() {
-  const [sessions, inscriptions, satisfaction, reclamations, organisme, formations, formateurs, journal] =
+  const [sessions, inscriptions, satisfaction, reclamations, org, formations, formateurs, journal, qualiopiData] =
     await Promise.all([
       getSessions(),
       getInscriptions(),
       getSatisfaction(),
       getReclamations(),
-      getOrganisme(),
+      getOrganization(),
       getFormations(),
       getFormateurs(),
       getJournal(),
+      getQualiopiScore(),
     ]);
 
   // KPIs
   const sessionsActives = sessions.filter(
-    (s) => ["en_cours", "planifiee"].includes(normalizeStatus(s.statut ?? ""))
+    (s) => s.statut === "en_cours" || s.statut === "planifiee"
   ).length;
 
   const inscrits = inscriptions.length;
 
   const satNotes = satisfaction
-    .map((s) => parseFloat(s.note_globale))
-    .filter((n) => !isNaN(n));
+    .map((s) => s.note_globale)
+    .filter((n): n is number => n != null && !isNaN(n));
   const satMoyenne =
     satNotes.length > 0
       ? (satNotes.reduce((a, b) => a + b, 0) / satNotes.length).toFixed(1)
       : "N/A";
 
-  // Score Qualiopi — moyenne des 7 critères
-  const orgFields = organisme[0] ?? {};
-  const orgFilled = Object.values(orgFields).filter((v) => v && v.trim() !== "").length;
-  const orgTotal = Math.max(1, Object.keys(orgFields).length);
-
-  const formCompletes = formations.filter(
-    (f) => f.intitule && f.objectifs && f.prerequis && f.duree_heures
-  ).length;
-
-  const positionFait = inscriptions.filter(
-    (i) => i.positionnement_fait === "TRUE" || i.positionnement_fait === "true"
-  ).length;
-
-  const formateursDossier = formateurs.filter(
-    (f) => f.dossier_complet === "TRUE" || f.dossier_complet === "true"
-  ).length;
-
-  const formateursQualif = formateurs.filter(
-    (f) => f.qualifications && f.qualifications.trim() !== ""
-  ).length;
-
-  const recTraitees = reclamations.filter(
-    (r) => ["traitee", "resolue", "cloturee"].includes(normalizeStatus(r.statut ?? ""))
-  ).length;
-
-  const satMoy =
-    satNotes.length > 0
-      ? satNotes.reduce((a, b) => a + b, 0) / satNotes.length
-      : 0;
+  // Score Qualiopi — use pre-computed data from getQualiopiScore
+  const { score: scoreQualiopi, criteres } = qualiopiData;
 
   // Satisfaction chart — aggregate by month
   const satByMonth = new Map<string, { sum: number; count: number }>();
   for (const s of satisfaction) {
-    const note = parseFloat(s.note_globale);
-    if (isNaN(note)) continue;
-    const date = s.date_reponse || s.date_envoi || "";
+    if (s.note_globale == null) continue;
+    const date = s.completed_at ?? "";
     const month = date.length >= 7 ? date.substring(0, 7) : "Inconnu";
     const entry = satByMonth.get(month) ?? { sum: 0, count: 0 };
-    entry.sum += note;
+    entry.sum += s.note_globale;
     entry.count += 1;
     satByMonth.set(month, entry);
   }
@@ -110,25 +80,10 @@ export default async function HomePage() {
       note: Math.round((sum / count) * 10) / 10,
     }));
 
-  // Critères Qualiopi — C7 uses /10 scale (100% at >=7/10)
-  const criteres = [
-    { num: 1, label: "Information", score: Math.round((orgFilled / orgTotal) * 100) },
-    { num: 2, label: "Objectifs", score: formations.length > 0 ? Math.round((formCompletes / formations.length) * 100) : 0 },
-    { num: 3, label: "Adaptation", score: inscriptions.length > 0 ? Math.round((positionFait / inscriptions.length) * 100) : 0 },
-    { num: 4, label: "Moyens", score: formateurs.length > 0 ? Math.round((formateursDossier / formateurs.length) * 100) : 0 },
-    { num: 5, label: "Compétences", score: formateurs.length > 0 ? Math.round((formateursQualif / formateurs.length) * 100) : 0 },
-    { num: 6, label: "Engagement", score: reclamations.length > 0 ? Math.round((recTraitees / reclamations.length) * 100) : 100 },
-    { num: 7, label: "Amélioration", score: satNotes.length > 0 ? Math.min(100, Math.round((satMoy / 7) * 100)) : 0 },
-  ];
-
-  const scoreQualiopi = Math.round(
-    criteres.reduce((sum, c) => sum + c.score, 0) / criteres.length
-  );
-
   // Recent sessions (last 5)
   const recentSessions = sessions.slice(-5).reverse();
 
-  // Recent journal activity (last 8) — already filtered & hour-converted by getJournal()
+  // Recent journal activity (last 8)
   const recentJournal = journal.slice(-8).reverse();
 
   return (
@@ -203,16 +158,16 @@ export default async function HomePage() {
                 };
                 return (
                   <Link
-                    key={s.session_id}
-                    href={`/sessions/${s.session_id}`}
+                    key={s.ref}
+                    href={`/sessions/${s.id}`}
                     className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
                   >
                     <div>
                       <p className="text-sm text-indigo-400 font-medium font-mono hover:underline">
-                        {s.session_id}
+                        {s.ref}
                       </p>
                       <p className="text-xs text-[var(--text-dim)] mt-0.5">
-                        {fmtDate(d1)}{d2 ? ` → ${fmtDate(d2)}` : ""} · {s.lieu || "—"}
+                        {fmtDate(d1)}{d2 ? ` → ${fmtDate(d2)}` : ""} · {s.formations?.intitule || "—"}
                       </p>
                     </div>
                     <StatusBadge status={s.statut ?? "planifiee"} />
@@ -229,7 +184,7 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        {/* Activité récente (Journal_Systeme) — cleaned data */}
+        {/* Activité récente (Journal) */}
         <div className="glass-card p-6 stagger-4">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-sm font-medium text-[var(--text-secondary)]">Activité récente</h3>
@@ -250,8 +205,8 @@ export default async function HomePage() {
           ) : (
             <div className="space-y-3">
               {recentJournal.map((j, i) => {
-                const isError = (j.statut ?? "").toLowerCase().includes("erreur") || (j.statut ?? "").toLowerCase().includes("error");
-                // Workflow badge color — journal uses "W0" or "WF0"
+                const isError = j.statut === "ERROR";
+                // Workflow badge color
                 const rawWf = (j.workflow ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
                 const wfNum = rawWf.replace(/^WF?/, "");
                 const wfKey = `W${wfNum}`;
@@ -283,10 +238,10 @@ export default async function HomePage() {
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-[var(--text-dim)]">
-                          {fmtJournalDate(j.date ?? j.timestamp ?? "", j.heure)}
+                          {fmtJournalDate(j.created_at)}
                         </span>
-                        {j.session_id && (
-                          <span className="text-xs text-[var(--text-dim)] font-mono">{j.session_id}</span>
+                        {j.session_ref && (
+                          <span className="text-xs text-[var(--text-dim)] font-mono">{j.session_ref}</span>
                         )}
                       </div>
                     </div>

@@ -1,16 +1,13 @@
 import {
-  getOrganisme,
+  getOrganization,
   getFormations,
   getFormateurs,
   getSatisfaction,
   getReclamations,
   getInscriptions,
-} from "@/lib/sheets";
+  getQualiopiScore,
+} from "@/lib/db";
 import ProgressRing from "@/components/ProgressRing";
-
-function normalizeStatus(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
-}
 
 interface Critere {
   num: number;
@@ -21,19 +18,20 @@ interface Critere {
 }
 
 export default async function ConformitePage() {
-  const [organisme, formations, formateurs, satisfaction, reclamations, inscriptions] =
+  const [organisme, formations, formateurs, satisfaction, reclamations, inscriptions, qualiopiScore] =
     await Promise.all([
-      getOrganisme(),
+      getOrganization(),
       getFormations(),
       getFormateurs(),
       getSatisfaction(),
       getReclamations(),
       getInscriptions(),
+      getQualiopiScore(),
     ]);
 
   // Calcul par critère
-  const orgFields = organisme[0] ?? {};
-  const orgFilled = Object.values(orgFields).filter((v) => v && v.trim() !== "").length;
+  const orgFields = organisme ?? {};
+  const orgFilled = Object.values(orgFields).filter((v) => v !== null && v !== undefined && String(v).trim() !== "").length;
   const orgTotal = Math.max(1, Object.keys(orgFields).length);
 
   const formCompletes = formations.filter(
@@ -41,11 +39,11 @@ export default async function ConformitePage() {
   ).length;
 
   const positionFait = inscriptions.filter(
-    (i) => i.positionnement_fait === "TRUE" || i.positionnement_fait === "true"
+    (i) => i.statut === "present"
   ).length;
 
   const formateursDossier = formateurs.filter(
-    (f) => f.dossier_complet === "TRUE" || f.dossier_complet === "true"
+    (f) => f.dossier_complet
   ).length;
 
   const formateursQualif = formateurs.filter(
@@ -53,16 +51,11 @@ export default async function ConformitePage() {
   ).length;
 
   const recTraitees = reclamations.filter(
-    (r) => ["traitee", "resolue", "cloturee"].includes(normalizeStatus(r.statut ?? ""))
+    (r) => ["traitee", "resolue", "cloturee"].includes(r.statut ?? "")
   ).length;
 
-  const satNotes = satisfaction
-    .map((s) => parseFloat(s.note_globale))
-    .filter((n) => !isNaN(n));
-  const satMoy =
-    satNotes.length > 0
-      ? satNotes.reduce((a, b) => a + b, 0) / satNotes.length
-      : 0;
+  const { satMoyenne, satNotes } = qualiopiScore;
+  const satMoy = satMoyenne;
 
   // C7 scoring: /10 scale — 100% at >=7/10, proportional below
   const c7Score = satNotes.length > 0 ? Math.min(100, Math.round((satMoy / 7) * 100)) : 0;

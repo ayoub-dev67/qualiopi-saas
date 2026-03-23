@@ -1,87 +1,157 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyCronAuth } from "@/lib/cron-auth";
-import { getSessions, getInscriptions, getApprenants, getOrganisme, getFormations } from "@/lib/sheets";
-import { updateSessionWorkflow, logJournal, appendRow } from "@/lib/sheets-write";
+import { createAdminClient } from "@/lib/supabase";
 import { sendEmail } from "@/lib/email";
-import { isTrue } from "@/lib/sheets-utils";
 import { w3SatisfactionEval } from "@/lib/email-templates";
-
-function norm(s: string) {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
-}
+import { randomUUID } from "crypto";
 
 export async function GET(req: NextRequest) {
-  const authError = verifyCronAuth(req);
-  if (authError) return authError;
+  const authHeader = req.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const SHEET_02 = process.env.SHEET_02_ID!;
-  const FORM_SAT = process.env.FORM_SATISFACTION_ID!;
-  const FORM_EVAL = process.env.FORM_EVALUATION_ID!;
-  const ENTRY_INS = process.env.ENTRY_INSCRIPTION_ID!;
-  const ENTRY_SES = process.env.ENTRY_SESSION_ID!;
-
+  const admin = createAdminClient();
   const errors: string[] = [];
   let processed = 0;
 
   try {
-    const [sessions, inscriptions, apprenants, organismeRows, formations] =
-      await Promise.all([getSessions(), getInscriptions(), getApprenants(), getOrganisme(), getFormations()]);
+    // Get all sessions needing W3, across all orgs
+    const { data: sessions, error: sessErr } = await admin
+      .from("sessions")
+      .select("*, formations(*)")
+      .eq("statut", "terminee")
+      .eq("workflow_3_ok", false)
+      .eq("is_deleted", false);
 
-    const organisme = organismeRows[0] ?? {};
-    const toProcess = sessions.filter(
-      (s) => norm(s.statut ?? "") === "terminee" && !isTrue(s.workflow_3_ok)
-    );
+    if (sessErr) throw new Error(sessErr.message);
+    if (!sessions || sessions.length === 0) {
+      return NextResponse.json({ success: true, processed: 0, errors: [] });
+    }
 
-    for (const session of toProcess) {
+    // Get org data for all relevant orgs
+    const orgIds = [...new Set(sessions.map((s) => s.org_id))];
+    const { data: orgs } = await admin
+      .from("organizations")
+      .select("*")
+      .in("id", orgIds);
+    const orgMap = new Map((orgs ?? []).map((o) => [o.id, o]));
+
+    for (const session of sessions) {
       try {
-        const formation = formations.find((f) => f.formation_id === session.formation_id) ?? {};
-        const sessionInscrits = inscriptions.filter((i) => i.session_id === session.session_id);
+        const org = orgMap.get(session.org_id);
+        if (!org) throw new Error(`Organization ${session.org_id} not found`);
+
+        const formation = session.formations;
+
+        const { data: inscriptions } = await admin
+          .from("inscriptions")
+          .select("*, apprenants(*)")
+          .eq("session_id", session.id)
+          .eq("is_deleted", false);
+
+        const inscrits = inscriptions ?? [];
         let sent = 0;
 
-        for (const ins of sessionInscrits) {
-          const apprenant = apprenants.find((a) => a.apprenant_id === ins.apprenant_id) ?? {};
-          const email = apprenant.email || ins.email;
+        const orgData: Record<string, string> = {
+          nom: org.nom,
+          siret: org.siret ?? "",
+          nda: org.nda ?? "",
+          adresse: org.adresse ?? "",
+          code_postal: "",
+          ville: "",
+          telephone: org.telephone ?? "",
+          email: org.email_contact ?? "",
+        };
+
+        const formationData: Record<string, string> = {
+          intitule: formation.intitule,
+          duree_heures: String(formation.duree_heures),
+          objectifs: formation.objectifs ?? "",
+        };
+
+        const sessionData: Record<string, string> = {
+          date_debut: session.date_debut,
+          date_fin: session.date_fin,
+          lieu: session.lieu ?? "",
+          modalite: session.modalite,
+        };
+
+        const today = new Date().toISOString().substring(0, 10);
+
+        for (const ins of inscrits) {
+          const apprenant = ins.apprenants;
+          const email = apprenant.email;
           if (!email) continue;
 
-          const satUrl = `https://docs.google.com/forms/d/${FORM_SAT}/viewform?usp=pp_url&entry.${ENTRY_INS}=${ins.inscription_id}&entry.${ENTRY_SES}=${session.session_id}`;
-          const evalUrl = `https://docs.google.com/forms/d/${FORM_EVAL}/viewform?usp=pp_url&entry.${ENTRY_INS}=${ins.inscription_id}&entry.${ENTRY_SES}=${session.session_id}`;
-          const prenom = apprenant.prenom || ins.prenom || "";
-          const nom = apprenant.nom || ins.nom || "";
+          const satToken = randomUUID();
+          const evalToken = randomUUID();
 
-          await sendEmail(
-            email,
-            `Évaluation & Satisfaction — ${formation.intitule || "Formation"}`,
-            w3SatisfactionEval(organisme, formation, session, prenom, nom, satUrl, evalUrl)
-          );
-
-          const today = new Date().toISOString().substring(0, 10);
-          await appendRow(SHEET_02, "Questionnaires_Envoyes", {
-            inscription_id: ins.inscription_id,
-            session_id: session.session_id,
+          // Insert satisfaction questionnaire
+          await admin.from("questionnaires_envoyes").insert({
+            org_id: session.org_id,
+            inscription_id: ins.id,
+            session_id: session.id,
             type: "satisfaction",
             statut: "envoye",
             date_envoi: today,
-            nb_relances: "0",
+            nb_relances: 0,
+            token: satToken,
           });
-          await appendRow(SHEET_02, "Questionnaires_Envoyes", {
-            inscription_id: ins.inscription_id,
-            session_id: session.session_id,
+
+          // Insert evaluation questionnaire
+          await admin.from("questionnaires_envoyes").insert({
+            org_id: session.org_id,
+            inscription_id: ins.id,
+            session_id: session.id,
             type: "evaluation",
             statut: "envoye",
             date_envoi: today,
-            nb_relances: "0",
+            nb_relances: 0,
+            token: evalToken,
           });
+
+          const satUrl = `${process.env.NEXT_PUBLIC_APP_URL}/forms/satisfaction?token=${satToken}`;
+          const evalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/forms/evaluation?token=${evalToken}`;
+
+          await sendEmail(
+            email,
+            `Évaluation & Satisfaction — ${formation.intitule}`,
+            w3SatisfactionEval(orgData, formationData, sessionData, apprenant.prenom, apprenant.nom, satUrl, evalUrl)
+          );
 
           sent++;
         }
 
-        await updateSessionWorkflow(session.session_id, "workflow_3_ok");
-        await logJournal("W3", session.session_id, "succes", `Satisfaction + Évaluation envoyés à ${sent} apprenant(s)`);
+        // Mark workflow_3 as done
+        await admin
+          .from("sessions")
+          .update({ workflow_3_ok: true })
+          .eq("id", session.id);
+
+        await admin.from("journal_systeme").insert({
+          org_id: session.org_id,
+          workflow: "W3",
+          session_id: session.id,
+          session_ref: session.ref,
+          statut: "OK",
+          message: `Satisfaction + Évaluation envoyés à ${sent} apprenant(s)`,
+        });
+
         processed++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${session.session_id}: ${msg}`);
-        await logJournal("W3", session.session_id, "erreur", msg).catch(() => {});
+        errors.push(`${session.ref}: ${msg}`);
+        await admin
+          .from("journal_systeme")
+          .insert({
+            org_id: session.org_id,
+            workflow: "W3",
+            session_id: session.id,
+            session_ref: session.ref,
+            statut: "ERROR",
+            message: msg,
+          })
+          .then(() => {}, () => {});
       }
     }
   } catch (err) {

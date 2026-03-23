@@ -1,4 +1,4 @@
-import { getSessions, getJournal } from "@/lib/sheets";
+import { getSessions, getJournal } from "@/lib/db";
 import { CheckCircle2, AlertTriangle, XCircle, CircleDot } from "lucide-react";
 import KPICard from "@/components/KPICard";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
@@ -19,10 +19,6 @@ const WORKFLOWS: WorkflowDef[] = [
   { id: "WF6", name: "Suivi à Froid", description: "Génération des attestations et certificats de réalisation, envoi du questionnaire de suivi à froid 6 mois post-formation" },
 ];
 
-function normalizeStatus(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
-}
-
 function relativeDate(dateStr: string): string {
   if (!dateStr || dateStr === "—") return "—";
   const d = new Date(dateStr.substring(0, 10));
@@ -38,11 +34,6 @@ function relativeDate(dateStr: string): string {
   return dateStr;
 }
 
-function isTrue(v: string | undefined): boolean {
-  const lower = (v ?? "").toLowerCase();
-  return lower === "true" || lower === "vrai";
-}
-
 export default async function WorkflowsPage() {
   const [sessions, journal] = await Promise.all([
     getSessions(),
@@ -50,27 +41,27 @@ export default async function WorkflowsPage() {
   ]);
 
   // Per-workflow status logic
-  // W0: sessions "planifiee" → warning if workflow_0_ok=false
-  // W1: sessions with workflow_0_ok=true → warning if workflow_1_ok=false
-  // W2: sessions "en_cours" → warning if workflow_2_ok=false
-  // W3: sessions "terminee" → warning if workflow_3_ok=false
+  // W0: sessions "planifiee" -> warning if workflow_0_ok=false
+  // W1: sessions with workflow_0_ok=true -> warning if workflow_1_ok=false
+  // W2: sessions "en_cours" -> warning if workflow_2_ok=false
+  // W3: sessions "terminee" -> warning if workflow_3_ok=false
 
   function getWfConcerned(wfIndex: number) {
     switch (wfIndex) {
       case 0:
-        return sessions.filter((s) => normalizeStatus(s.statut ?? "") === "planifiee");
+        return sessions.filter((s) => s.statut === "planifiee");
       case 1:
-        return sessions.filter((s) => isTrue(s.workflow_0_ok));
+        return sessions.filter((s) => s.workflow_0_ok === true);
       case 2:
-        return sessions.filter((s) => normalizeStatus(s.statut ?? "") === "en_cours");
+        return sessions.filter((s) => s.statut === "en_cours");
       case 3:
-        return sessions.filter((s) => normalizeStatus(s.statut ?? "") === "terminee");
+        return sessions.filter((s) => s.statut === "terminee");
       default:
         return [];
     }
   }
 
-  const wfColumns = ["workflow_0_ok", "workflow_1_ok", "workflow_2_ok", "workflow_3_ok"];
+  const wfColumns = ["workflow_0_ok", "workflow_1_ok", "workflow_2_ok", "workflow_3_ok"] as const;
 
   const workflowData = WORKFLOWS.map((wf, i) => {
     let lastExec = "—";
@@ -86,13 +77,12 @@ export default async function WorkflowsPage() {
     });
     execCount = journalEntries.length;
     errorCount = journalEntries.filter(
-      (j) => normalizeStatus(j.statut ?? "") === "erreur" || normalizeStatus(j.statut ?? "") === "error"
+      (j) => j.statut === "ERROR"
     ).length;
 
     if (journalEntries.length > 0) {
       const last = journalEntries[journalEntries.length - 1];
-      const rawDate = last.date ?? last.timestamp ?? "";
-      lastExec = relativeDate(rawDate);
+      lastExec = relativeDate(last.created_at ?? "");
     }
 
     // Last 3 executions for mini timeline
@@ -100,8 +90,7 @@ export default async function WorkflowsPage() {
     const timeline: ("ok" | "error" | "none")[] = [];
     for (let t = 0; t < 3; t++) {
       if (t < last3.length) {
-        const st = normalizeStatus(last3[t].statut ?? "");
-        timeline.push(st === "erreur" || st === "error" ? "error" : "ok");
+        timeline.push(last3[t].statut === "ERROR" ? "error" : "ok");
       } else {
         timeline.push("none");
       }
@@ -116,7 +105,7 @@ export default async function WorkflowsPage() {
     if (i < wfColumns.length) {
       const concernedSessions = getWfConcerned(i);
       concerned = concernedSessions.length;
-      done = concernedSessions.filter((s) => isTrue(s[wfColumns[i]])).length;
+      done = concernedSessions.filter((s) => (s as unknown as Record<string, unknown>)[wfColumns[i]] === true).length;
       missing = concerned - done;
 
       if (concerned === 0) {

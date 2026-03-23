@@ -1,16 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  getSessions,
-  getFormations,
-  getFormateurs,
+  getSession,
   getInscriptions,
-  getApprenants,
   getPositionnements,
-  getEmargement,
+  getEmargements,
   getSatisfaction,
   getJournal,
-} from "@/lib/sheets";
+  getDocuments,
+} from "@/lib/db";
 import StatusBadge from "@/components/StatusBadge";
 import {
   ArrowLeft,
@@ -25,15 +23,6 @@ import {
   Star,
   MessageSquare,
 } from "lucide-react";
-
-function isTrue(v: string | undefined): boolean {
-  const l = (v ?? "").toLowerCase();
-  return l === "true" || l === "vrai";
-}
-
-function norm(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
-}
 
 function fmtDateFull(d: string): string {
   if (!d || d.length < 10) return d || "—";
@@ -75,14 +64,19 @@ interface PipelineStep {
   status: StepStatus;
 }
 
-function computePipeline(session: Record<string, string>): PipelineStep[] {
-  const statut = norm(session.statut ?? "");
-  const w0 = isTrue(session.workflow_0_ok);
-  const w1 = isTrue(session.workflow_1_ok);
-  const w2 = isTrue(session.workflow_2_ok);
-  const w3 = isTrue(session.workflow_3_ok);
-  const enCours = statut === "en_cours";
-  const terminee = statut === "terminee";
+function computePipeline(session: {
+  statut: string;
+  workflow_0_ok: boolean;
+  workflow_1_ok: boolean;
+  workflow_2_ok: boolean;
+  workflow_3_ok: boolean;
+}): PipelineStep[] {
+  const w0 = session.workflow_0_ok;
+  const w1 = session.workflow_1_ok;
+  const w2 = session.workflow_2_ok;
+  const w3 = session.workflow_3_ok;
+  const enCours = session.statut === "en_cours";
+  const terminee = session.statut === "terminee";
 
   return [
     { label: "Créée", status: "done" },
@@ -93,6 +87,10 @@ function computePipeline(session: Record<string, string>): PipelineStep[] {
     { label: "Évaluation (W3)", status: w3 ? "done" : terminee ? "active" : "pending" },
     { label: "Terminée", status: terminee ? "done" : "pending" },
   ];
+}
+
+function norm(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_");
 }
 
 // Modalité badge
@@ -135,48 +133,46 @@ function DocStatus({ status }: { status: "done" | "in_progress" | "pending"; lab
 export default async function SessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const [sessions, formations, formateurs, inscriptions, apprenants, positionnements, emargement, satisfaction, journal] =
-    await Promise.all([
-      getSessions(),
-      getFormations(),
-      getFormateurs(),
-      getInscriptions(),
-      getApprenants(),
-      getPositionnements(),
-      getEmargement(),
-      getSatisfaction(),
-      getJournal(),
-    ]);
-
-  const session = sessions.find((s) => s.session_id === id);
+  const session = await getSession(id);
   if (!session) notFound();
 
-  const formation = formations.find((f) => f.formation_id === session.formation_id);
-  const formateur = formateurs.find((f) => f.formateur_id === session.formateur_id);
+  const formation = session.formations;
+  const formateur = session.formateurs;
 
-  // Inscriptions for this session
-  const sessionInscriptions = inscriptions.filter((i) => i.session_id === id);
-  const apprenantMap = new Map(apprenants.map((a) => [a.apprenant_id, a]));
-  const positionnementMap = new Map(positionnements.map((p) => [p.inscription_id, p]));
-  const emargementByInscription = new Map<string, Record<string, string>[]>();
+  const [inscriptions, positionnements, emargement, satisfaction, journal, documents] =
+    await Promise.all([
+      getInscriptions(session.id),
+      getPositionnements(),
+      getEmargements(session.id),
+      getSatisfaction(session.id),
+      getJournal(),
+      getDocuments(session.id),
+    ]);
+
+  // Positionnement lookup by inscription_id
+  const positionnementSet = new Set(positionnements.map((p) => p.inscription_id));
+
+  // Emargement by inscription
+  const emargementByInscription = new Map<string, typeof emargement>();
   for (const e of emargement) {
-    if (e.session_id === id) {
-      const list = emargementByInscription.get(e.inscription_id) ?? [];
-      list.push(e);
-      emargementByInscription.set(e.inscription_id, list);
-    }
+    const list = emargementByInscription.get(e.inscription_id) ?? [];
+    list.push(e);
+    emargementByInscription.set(e.inscription_id, list);
   }
-  const satisfactionMap = new Map(satisfaction.filter((s) => s.session_id === id).map((s) => [s.inscription_id, s]));
+
+  // Satisfaction by inscription
+  const satisfactionMap = new Map(satisfaction.map((s) => [s.inscription_id, s]));
 
   // Pipeline
   const pipeline = computePipeline(session);
 
   // Journal entries for this session
-  const sessionJournal = journal.filter((j) => j.session_id === id).reverse();
+  const sessionJournal = journal.filter((j) => j.session_id === session.id).reverse();
 
-  // Satisfaction data for this session
-  const sessionSatisfaction = satisfaction.filter((s) => s.session_id === id);
-  const satNotes = sessionSatisfaction.map((s) => parseFloat(s.note_globale)).filter((n) => !isNaN(n));
+  // Satisfaction data
+  const satNotes = satisfaction
+    .map((s) => s.note_globale)
+    .filter((n): n is number => n !== null && n !== undefined);
   const satMoyenne = satNotes.length > 0 ? satNotes.reduce((a, b) => a + b, 0) / satNotes.length : null;
 
   // Category scores
@@ -186,7 +182,9 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
     { label: "Organisation", key: "note_organisation" },
   ];
   const catAverages = catScores.map(({ label, key }) => {
-    const notes = sessionSatisfaction.map((s) => parseFloat(s[key])).filter((n) => !isNaN(n));
+    const notes = satisfaction
+      .map((s) => (s as unknown as Record<string, unknown>)[key] as number | null)
+      .filter((n): n is number => n !== null && n !== undefined);
     return {
       label,
       average: notes.length > 0 ? notes.reduce((a, b) => a + b, 0) / notes.length : null,
@@ -194,31 +192,14 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
   });
 
   // Verbatims
-  const verbatims = sessionSatisfaction
-    .map((s) => s.commentaire || s.verbatim || "")
-    .filter((v) => v.trim() !== "");
+  const verbatims = satisfaction
+    .map((s) => s.commentaire || s.points_forts || "")
+    .filter((v) => typeof v === "string" && v.trim() !== "") as string[];
 
   // Counts
-  const nbInscrits = parseInt(session.nb_inscrits ?? "0") || sessionInscriptions.length;
-  const nbPlaces = parseInt(session.nombre_places ?? "0") || 1;
+  const nbInscrits = session.nb_inscrits ?? inscriptions.length;
+  const nbPlaces = session.nombre_places ?? 1;
   const pctFill = Math.min(100, Math.round((nbInscrits / nbPlaces) * 100));
-
-  // Total emargement demi-journées expected
-  const totalEmargement = emargement.filter((e) => e.session_id === id);
-
-  // Documents
-  const statut = norm(session.statut ?? "");
-  const w0 = isTrue(session.workflow_0_ok);
-  const w2 = isTrue(session.workflow_2_ok);
-  const isTerminee = statut === "terminee";
-
-  const documents = [
-    { name: "Convention de formation", status: w0 ? "done" as const : "pending" as const },
-    { name: "Convocations", status: w0 ? "done" as const : "pending" as const },
-    { name: "Feuille d'émargement", status: w2 ? "in_progress" as const : "pending" as const },
-    { name: "Attestation de fin de formation", status: isTerminee ? "done" as const : "pending" as const },
-    { name: "Certificat de réalisation", status: isTerminee ? "done" as const : "pending" as const },
-  ];
 
   // Workflow badge colors
   const WF_COLORS: Record<string, { bg: string; text: string }> = {
@@ -244,18 +225,18 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <h1 className="text-[28px] font-bold text-[var(--text-primary)] leading-tight">
-              {formation?.intitule ?? session.formation_id}
+              {formation.intitule}
             </h1>
             <p className="text-sm text-[var(--text-dim)] mt-1.5 font-mono">
-              {session.session_id}
+              {session.ref}
               <span className="mx-2 text-[var(--border-subtle)]">·</span>
-              {formateur ? `${formateur.prenom ?? ""} ${formateur.nom ?? ""}`.trim() : session.formateur_id}
+              {`${formateur.prenom} ${formateur.nom}`.trim()}
               <span className="mx-2 text-[var(--border-subtle)]">·</span>
               {session.lieu || "—"}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <StatusBadge status={session.statut ?? "planifiee"} />
+            <StatusBadge status={session.statut} />
             <ModaliteBadge modalite={session.modalite ?? ""} />
           </div>
         </div>
@@ -327,12 +308,12 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
             <h3 className="text-sm font-semibold text-[var(--text-secondary)]">Formation</h3>
           </div>
           <div className="space-y-3 text-sm">
-            <InfoRow label="Intitulé" value={formation?.intitule ?? "—"} />
-            <InfoRow label="Durée" value={formation?.duree_heures ? `${formation.duree_heures}h` : "—"} />
-            <InfoRow label="Objectifs" value={formation?.objectifs ?? "—"} />
-            <InfoRow label="Prérequis" value={formation?.prerequis ?? "—"} />
-            <InfoRow label="Modalité" value={formation?.modalite ?? session.modalite ?? "—"} />
-            <InfoRow label="Tarif" value={formation?.tarif ? `${formation.tarif} €` : "—"} />
+            <InfoRow label="Intitulé" value={formation.intitule ?? "—"} />
+            <InfoRow label="Durée" value={formation.duree_heures ? `${formation.duree_heures}h` : "—"} />
+            <InfoRow label="Objectifs" value={formation.objectifs ?? "—"} />
+            <InfoRow label="Prérequis" value={formation.prerequis ?? "—"} />
+            <InfoRow label="Modalité" value={formation.modalite ?? session.modalite ?? "—"} />
+            <InfoRow label="Tarif" value={formation.tarif ? `${formation.tarif} €` : "—"} />
           </div>
         </div>
 
@@ -343,12 +324,12 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
             <h3 className="text-sm font-semibold text-[var(--text-secondary)]">Formateur</h3>
           </div>
           <div className="space-y-3 text-sm">
-            <InfoRow label="Nom" value={formateur ? `${formateur.prenom ?? ""} ${formateur.nom ?? ""}`.trim() : "—"} />
-            <InfoRow label="Email" value={formateur?.email ?? "—"} />
-            <InfoRow label="Spécialité" value={formateur?.specialite ?? "—"} />
-            <InfoRow label="Qualifications" value={formateur?.qualifications ?? "—"} />
+            <InfoRow label="Nom" value={`${formateur.prenom} ${formateur.nom}`.trim()} />
+            <InfoRow label="Email" value={formateur.email ?? "—"} />
+            <InfoRow label="Spécialité" value={formateur.specialite ?? "—"} />
+            <InfoRow label="Qualifications" value={formateur.qualifications ?? "—"} />
             <div className="pt-1">
-              {formateur && isTrue(formateur.dossier_complet) ? (
+              {formateur.dossier_complet ? (
                 <span className="inline-flex items-center gap-1 text-xs text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md font-medium">
                   <Check size={12} /> Dossier complet
                 </span>
@@ -398,10 +379,10 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
           <Users size={16} className="text-[var(--accent)]" />
           <h3 className="text-sm font-semibold text-[var(--text-secondary)]">
             Apprenants inscrits
-            <span className="ml-2 text-xs text-[var(--text-dim)] font-normal">({sessionInscriptions.length})</span>
+            <span className="ml-2 text-xs text-[var(--text-dim)] font-normal">({inscriptions.length})</span>
           </h3>
         </div>
-        {sessionInscriptions.length === 0 ? (
+        {inscriptions.length === 0 ? (
           <div className="flex flex-col items-center py-8">
             <Users size={40} className="text-[var(--text-dim)] mb-3 opacity-30" />
             <p className="text-sm text-[var(--text-secondary)]">Aucun apprenant inscrit à cette session</p>
@@ -419,15 +400,15 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                 </tr>
               </thead>
               <tbody>
-                {sessionInscriptions.map((ins) => {
-                  const apprenant = apprenantMap.get(ins.apprenant_id);
-                  const pos = positionnementMap.get(ins.inscription_id);
-                  const emarges = emargementByInscription.get(ins.inscription_id) ?? [];
-                  const sat = satisfactionMap.get(ins.inscription_id);
-                  const satNote = sat ? parseFloat(sat.note_globale) : NaN;
+                {inscriptions.map((ins) => {
+                  const apprenant = ins.apprenants;
+                  const hasPositionnement = positionnementSet.has(ins.id);
+                  const emarges = emargementByInscription.get(ins.id) ?? [];
+                  const sat = satisfactionMap.get(ins.id);
+                  const satNote = sat?.note_globale ?? null;
 
                   return (
-                    <tr key={ins.inscription_id} className="border-b border-[var(--border-subtle)]/50 hover:bg-[var(--bg-card-hover)] transition-colors">
+                    <tr key={ins.id} className="border-b border-[var(--border-subtle)]/50 hover:bg-[var(--bg-card-hover)] transition-colors">
                       <td className="px-4 py-3 text-[var(--text-primary)] font-medium">{apprenant?.nom ?? "—"}</td>
                       <td className="px-4 py-3 text-[var(--text-secondary)]">{apprenant?.prenom ?? "—"}</td>
                       <td className="px-4 py-3 text-[var(--text-dim)] text-xs">{apprenant?.email ?? "—"}</td>
@@ -436,7 +417,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                         <StatusBadge status={ins.statut ?? "inscrit"} />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {pos || isTrue(ins.positionnement_fait) ? (
+                        {hasPositionnement ? (
                           <span className="text-emerald-400">✓</span>
                         ) : (
                           <span className="text-[var(--text-dim)]">✗</span>
@@ -446,7 +427,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                         {emarges.length > 0 ? `${emarges.length}` : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {!isNaN(satNote) ? (
+                        {satNote !== null ? (
                           <span className="text-amber-400 font-medium text-xs">{satNote.toFixed(1)}/10</span>
                         ) : (
                           <span className="text-[var(--text-dim)]">—</span>
@@ -470,31 +451,25 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         <div className="space-y-2">
           {documents.map((doc) => (
             <div
-              key={doc.name}
+              key={doc.id}
               className="flex items-center gap-4 p-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
               style={{
-                borderLeft: `3px solid ${
-                  doc.status === "done" ? "#10b981" : doc.status === "in_progress" ? "#f59e0b" : "#334155"
-                }`,
+                borderLeft: "3px solid #10b981",
               }}
             >
-              <FileText
-                size={18}
-                className={
-                  doc.status === "done"
-                    ? "text-emerald-400"
-                    : doc.status === "in_progress"
-                    ? "text-amber-400"
-                    : "text-[var(--text-dim)]"
-                }
-              />
-              <span className="flex-1 text-sm text-[var(--text-primary)]">{doc.name}</span>
-              <DocStatus status={doc.status} label={doc.name} />
+              <FileText size={18} className="text-emerald-400" />
+              <div className="flex-1 min-w-0">
+                <span className="text-sm text-[var(--text-primary)] truncate block">{doc.nom_fichier}</span>
+                <span className="text-[11px] text-[var(--text-dim)]">{doc.type}</span>
+              </div>
+              <span className="text-[11px] text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-md font-medium">Généré</span>
               <a
-                href="#"
+                href={doc.public_url || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-xs text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors flex items-center gap-1"
               >
-                <ExternalLink size={12} /> Drive
+                <ExternalLink size={12} /> Voir
               </a>
             </div>
           ))}
@@ -548,7 +523,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                           {wfKey || "SYS"}
                         </span>
                         <span className="text-xs text-[var(--text-dim)]">
-                          {fmtJournalDate(j.date ?? j.timestamp ?? "", j.heure)}
+                          {fmtJournalDate(j.created_at ?? "")}
                         </span>
                         {isError && (
                           <span className="text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded font-medium">ERREUR</span>
