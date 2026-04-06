@@ -56,9 +56,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <div>
               <h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">Légal</h4>
               <div className="space-y-2">
-                <span className="block text-xs text-[var(--text-dim)]">Mentions légales</span>
-                <span className="block text-xs text-[var(--text-dim)]">CGV</span>
-                <span className="block text-xs text-[var(--text-dim)]">RGPD</span>
+                <Link href="/mentions-legales" className="block text-xs text-[var(--text-dim)] hover:text-[var(--text-secondary)] transition-colors">Mentions légales</Link>
+                <Link href="/cgv" className="block text-xs text-[var(--text-dim)] hover:text-[var(--text-secondary)] transition-colors">CGV</Link>
+                <Link href="/confidentialite" className="block text-xs text-[var(--text-dim)] hover:text-[var(--text-secondary)] transition-colors">Confidentialité / RGPD</Link>
               </div>
             </div>
           </div>

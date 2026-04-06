@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "Tarif fixe, sans surprise. 29€/mois pour automatiser votre conformité Qualiopi.",
 };
 
-const essentialFeatures = ["Dashboard temps réel","Score Qualiopi sur 32 indicateurs","7 workflows automatiques","Tous les documents PDF","Émargement digital","Emails automatiques","Relances multi-niveaux","Suivi à froid","Google Workspace natif","Apprenants illimités","Support email"];
+const essentialFeatures = ["Dashboard temps réel","Score Qualiopi sur 32 indicateurs","7 workflows automatiques","Tous les documents PDF","Émargement digital","Emails automatiques","Relances multi-niveaux","Suivi à froid","Google Workspace natif","Bénéficiaires illimités","Support email"];
 const customFeatures = ["Tout du plan Essentiel","Personnalisation des workflows","Formation dédiée (2h)","Support prioritaire","Multi-organismes","Intégrations sur mesure"];
 
 export default function PricingPage() {
@@ -15,7 +15,7 @@ export default function PricingPage() {
     <div className="py-20 px-4">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-bold text-center text-[var(--text-primary)] mb-3">Un prix simple, sans surprise</h1>
-        <p className="text-center text-[var(--text-secondary)] mb-12">Pas de coûts cachés, pas de tarification par apprenant</p>
+        <p className="text-center text-[var(--text-secondary)] mb-12">Pas de coûts cachés, pas de tarification par bénéficiaire</p>
         <div className="grid md:grid-cols-2 gap-6">
           <div className="relative glass-card p-8 rounded-2xl border-indigo-500/30">
             <span className="absolute -top-3 left-6 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-full">Populaire</span>

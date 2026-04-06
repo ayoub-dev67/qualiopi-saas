@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <>
       <AutoRefresh />
       <Sidebar orgName={org?.nom} orgNda={org?.nda ?? undefined} alertCount={alertCount} serverTime={Date.now()} />
-      <div className="ml-[60px] lg:ml-60 min-h-screen flex flex-col">
+      <div className="ml-[72px] lg:ml-60 min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 p-4 lg:p-8">{children}</main>
       </div>

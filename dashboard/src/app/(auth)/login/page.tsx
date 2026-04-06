@@ -25,7 +25,7 @@ function LoginForm() {
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
-      setError("Email ou mot de passe incorrect");
+      setError("Email ou mot de passe incorrect. Vérifiez la casse et la touche Verr Maj.");
       setLoading(false);
     } else {
       router.push(next);

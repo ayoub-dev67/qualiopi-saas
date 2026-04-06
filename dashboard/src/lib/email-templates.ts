@@ -62,6 +62,15 @@ function closing(orgName: string): string {
   return `<p style="margin:16px 0 0 0">Cordialement,<br><strong>${orgName}</strong></p>`;
 }
 
+function accessibility(org: Org): string {
+  const nom = org.referent_handicap_nom || "";
+  const email = org.referent_handicap_email || "";
+  if (!nom && !email) {
+    return `<p style="margin:16px 0 0 0;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:12px"><strong>Accessibilité handicap :</strong> pour toute demande spécifique liée à une situation de handicap, contactez notre référent handicap. Nous étudierons avec vous les adaptations possibles.</p>`;
+  }
+  return `<p style="margin:16px 0 0 0;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:12px"><strong>Accessibilité handicap :</strong> pour toute demande spécifique liée à une situation de handicap, contactez ${nom}${email ? ` à <a href="mailto:${email}" style="color:#6366f1">${email}</a>` : ""}.</p>`;
+}
+
 // ═══════════════════════════════════════
 // W0 — Convocation
 // ═══════════════════════════════════════
@@ -72,6 +81,7 @@ ${greeting(inscrit.prenom || "", inscrit.nom || "")}
 ${sessionInfo(session, formation)}
 <p style="margin:8px 0 0 0;font-size:13px;color:#6b7280">La convocation est également disponible en pièce jointe au format PDF.</p>
 ${closing(org.nom || "")}
+${accessibility(org)}
 `);
 }
 
@@ -85,6 +95,7 @@ ${greeting(prenom, nom)}
 ${sessionInfo(session, formation)}
 ${btn({ label: "Compléter le questionnaire", url: formUrl, color: "#6366f1" })}
 ${closing(org.nom || "")}
+${accessibility(org)}
 `);
 }
 

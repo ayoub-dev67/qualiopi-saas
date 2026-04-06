@@ -53,7 +53,7 @@ export default function DemoPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: "Sessions actives", value: "5", color: "#6366f1", icon: CalendarDays },
-          { label: "Apprenants inscrits", value: "34", color: "#10b981", icon: Users },
+          { label: "Bénéficiaires inscrits", value: "34", color: "#10b981", icon: Users },
           { label: "Satisfaction moyenne", value: "8.6/10", color: "#f59e0b", icon: Star },
           { label: "Score Qualiopi", value: "87%", color: "#3b82f6", icon: Shield },
         ].map((kpi) => (

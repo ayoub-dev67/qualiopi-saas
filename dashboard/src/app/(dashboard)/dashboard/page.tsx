@@ -9,7 +9,7 @@ import {
   getJournal,
   getQualiopiScore,
 } from "@/lib/db";
-import { CalendarDays, Users, Star, Shield, Clock, Activity, ArrowRight } from "lucide-react";
+import { CalendarDays, Users, Star, Shield, Clock, Activity, ArrowRight, Check, Sparkles } from "lucide-react";
 import Link from "next/link";
 import KPICard from "@/components/KPICard";
 import StatusBadge from "@/components/StatusBadge";
@@ -86,8 +86,105 @@ export default async function HomePage() {
   // Recent journal activity (last 8)
   const recentJournal = journal.slice(-8).reverse();
 
+  // Welcome banner — show if no sessions and no inscriptions (fresh account)
+  const showWelcomeBanner = sessions.length === 0 && inscrits === 0;
+  const hasFormation = formations.length > 0;
+  const hasSession = sessions.length > 0;
+
+  // Keep org and formateurs referenced (used by welcome banner logic and qualiopi score already)
+  void org;
+  void formateurs;
+
   return (
     <div className="space-y-6">
+      {/* Welcome banner — shown on fresh accounts */}
+      {showWelcomeBanner && (
+        <div className="glass-card p-6 relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[var(--accent-glow)] blur-2xl" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={16} className="text-[var(--accent)]" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+                Bienvenue !
+              </span>
+            </div>
+            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-1">
+              3 étapes pour démarrer
+            </h2>
+            <p className="text-sm text-[var(--text-secondary)] mb-5">
+              Configurez votre espace pour bénéficier du suivi Qualiopi automatisé.
+            </p>
+
+            <ol className="space-y-3">
+              {/* Étape 1 — compte créé */}
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <Check size={14} className="text-emerald-500" />
+                </span>
+                <div>
+                  <p className="text-sm text-[var(--text-primary)] font-medium">Compte créé</p>
+                  <p className="text-xs text-[var(--text-dim)]">Votre organisme est prêt.</p>
+                </div>
+              </li>
+
+              {/* Étape 2 — formation */}
+              <li className="flex items-start gap-3">
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                    hasFormation ? "bg-emerald-500/20" : "border border-[var(--border-strong)]"
+                  }`}
+                >
+                  {hasFormation ? (
+                    <Check size={14} className="text-emerald-500" />
+                  ) : (
+                    <span className="text-[10px] font-bold text-[var(--text-dim)]">2</span>
+                  )}
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm text-[var(--text-primary)] font-medium">
+                    Créer votre première formation
+                  </p>
+                  <p className="text-xs text-[var(--text-dim)]">
+                    Renseignez l&apos;intitulé, la durée, les objectifs et les prérequis.
+                  </p>
+                </div>
+                {!hasFormation && (
+                  <Link
+                    href="/onboarding"
+                    className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium whitespace-nowrap"
+                  >
+                    Commencer →
+                  </Link>
+                )}
+              </li>
+
+              {/* Étape 3 — session */}
+              <li className="flex items-start gap-3">
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                    hasSession ? "bg-emerald-500/20" : "border border-[var(--border-strong)]"
+                  }`}
+                >
+                  {hasSession ? (
+                    <Check size={14} className="text-emerald-500" />
+                  ) : (
+                    <span className="text-[10px] font-bold text-[var(--text-dim)]">3</span>
+                  )}
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm text-[var(--text-primary)] font-medium">
+                    Planifier votre première session
+                  </p>
+                  <p className="text-xs text-[var(--text-dim)]">
+                    Utilisez le bouton « Nouvelle session » en haut à droite.
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </div>
+      )}
+
       {/* Row 1: KPI Cards with stagger */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <KPICard
@@ -99,7 +196,7 @@ export default async function HomePage() {
           trend={sessions.length > 0 ? { direction: "up", value: `${sessions.length} total` } : undefined}
         />
         <KPICard
-          label="Apprenants inscrits"
+          label="Bénéficiaires inscrits"
           value={inscrits}
           icon={Users}
           accent="#10b981"
@@ -194,13 +291,13 @@ export default async function HomePage() {
             <div className="flex flex-col items-center py-8">
               {/* Empty state SVG illustration */}
               <svg width="80" height="60" viewBox="0 0 80 60" fill="none" className="mb-4 opacity-30">
-                <rect x="5" y="10" width="70" height="40" rx="6" stroke="#475569" strokeWidth="1.5" fill="none" />
-                <line x1="15" y1="22" x2="45" y2="22" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
-                <line x1="15" y1="30" x2="55" y2="30" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
-                <line x1="15" y1="38" x2="35" y2="38" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+                <rect x="5" y="10" width="70" height="40" rx="6" stroke="currentColor" strokeWidth="1.5" fill="none" className="text-[var(--text-dim)]" />
+                <line x1="15" y1="22" x2="45" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[var(--border-strong)]" />
+                <line x1="15" y1="30" x2="55" y2="30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[var(--border-strong)]" />
+                <line x1="15" y1="38" x2="35" y2="38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[var(--border-strong)]" />
               </svg>
-              <p className="text-sm text-[var(--text-secondary)]">Aucune activité enregistrée</p>
-              <p className="text-xs text-[var(--text-dim)] mt-1">Les événements apparaîtront ici automatiquement</p>
+              <p className="text-sm text-[var(--text-secondary)]">L&apos;activité de vos workflows apparaîtra ici</p>
+              <p className="text-xs text-[var(--text-dim)] mt-1">Créez votre première session pour voir les événements</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -219,7 +316,17 @@ export default async function HomePage() {
                   W5: { bg: "rgba(139,92,246,0.15)", text: "#c4b5fd" },
                   W6: { bg: "rgba(20,184,166,0.15)", text: "#5eead4" },
                 };
+                const WF_TOOLTIPS: Record<string, string> = {
+                  W0: "W0 — Setup session : convention + convocations",
+                  W1: "W1 — Envoi des questionnaires de positionnement",
+                  W2: "W2 — Émargement des bénéficiaires",
+                  W3: "W3 — Évaluation et satisfaction post-formation",
+                  W4: "W4 — Amélioration continue + KPIs",
+                  W5: "W5 — Relances des questionnaires non complétés",
+                  W6: "W6 — Suivi à froid 6 mois",
+                };
                 const wfColor = WF_COLORS[wfKey] ?? { bg: "rgba(71,85,105,0.15)", text: "#94a3b8" };
+                const wfTooltip = WF_TOOLTIPS[wfKey] ?? "Événement système";
                 return (
                   <div
                     key={i}
@@ -227,8 +334,9 @@ export default async function HomePage() {
                   >
                     {/* Workflow badge */}
                     <span
-                      className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded shrink-0 mt-0.5"
+                      className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded shrink-0 mt-0.5 cursor-help"
                       style={{ background: wfColor.bg, color: wfColor.text }}
+                      title={wfTooltip}
                     >
                       {wfKey || "SYS"}
                     </span>

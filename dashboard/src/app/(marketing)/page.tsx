@@ -109,7 +109,7 @@ const essentialFeatures = [
   "Relances multi-niveaux",
   "Suivi à froid",
   "Google Workspace natif",
-  "Apprenants illimités",
+  "Bénéficiaires illimités",
   "Support email",
 ];
 
@@ -171,7 +171,7 @@ export default function LandingPage() {
             <div className="p-6 grid grid-cols-4 gap-3">
               {[
                 { label: "Sessions actives", value: "6", color: "#6366f1" },
-                { label: "Apprenants", value: "34", color: "#10b981" },
+                { label: "Bénéficiaires", value: "34", color: "#10b981" },
                 { label: "Satisfaction", value: "8.4", color: "#f59e0b" },
                 { label: "Score Qualiopi", value: "87%", color: "#3b82f6" },
               ].map((k) => (

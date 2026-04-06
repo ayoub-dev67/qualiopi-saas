@@ -13,12 +13,12 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { href: "/dashboard", label: "Vue d'ensemble", icon: LayoutDashboard },
-  { href: "/sessions", label: "Sessions", icon: CalendarDays },
-  { href: "/conformite", label: "Conformité", icon: Shield },
-  { href: "/financier", label: "Financier", icon: DollarSign },
-  { href: "/workflows", label: "Workflows", icon: Zap },
-  { href: "/alertes", label: "Alertes", icon: Bell },
+  { href: "/dashboard", label: "Vue d'ensemble", shortLabel: "Accueil", icon: LayoutDashboard },
+  { href: "/sessions", label: "Sessions", shortLabel: "Sessions", icon: CalendarDays },
+  { href: "/conformite", label: "Conformité", shortLabel: "Conform.", icon: Shield },
+  { href: "/financier", label: "Financier", shortLabel: "Finance", icon: DollarSign },
+  { href: "/workflows", label: "Workflows", shortLabel: "Workflows", icon: Zap },
+  { href: "/alertes", label: "Alertes", shortLabel: "Alertes", icon: Bell },
 ];
 
 interface SidebarProps {
@@ -41,7 +41,7 @@ export default function Sidebar({ orgName, orgNda, alertCount = 0, serverTime }:
   const syncLabel = elapsed < 5 ? "à l'instant" : `il y a ${elapsed}s`;
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 z-50 flex w-[60px] lg:w-60 flex-col bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)]">
+    <aside className="fixed left-0 top-0 bottom-0 z-50 flex w-[72px] lg:w-60 flex-col bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] shadow-sm">
       {/* Logo */}
       <div className="flex items-center gap-3 px-3 lg:px-5 py-6">
         <div
@@ -65,26 +65,31 @@ export default function Sidebar({ orgName, orgNda, alertCount = 0, serverTime }:
 
       {/* Nav */}
       <nav className="flex-1 px-2 lg:px-3 space-y-1 overflow-y-auto">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.map(({ href, label, shortLabel, icon: Icon }) => {
           const active = href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
           const isAlertes = href === "/alertes";
           return (
             <Link
               key={href}
               href={href}
-              className={`relative flex items-center justify-center lg:justify-start gap-3 px-2 lg:px-[14px] py-[14px] lg:py-3 rounded-[10px] text-sm transition-all ${
+              className={`relative flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 px-1 lg:px-[14px] py-2 lg:py-3 rounded-[10px] text-sm transition-all ${
                 active
-                  ? "bg-[var(--accent-glow)] text-white"
-                  : "text-[var(--text-secondary)] hover:text-white hover:bg-white/5"
+                  ? "bg-[var(--accent-glow)] text-[var(--accent)] lg:text-[var(--text-primary)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
               }`}
             >
               {active && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[var(--accent)] rounded-r" />
+                <span className="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[var(--accent)] rounded-r" />
               )}
               <Icon size={18} className="shrink-0" />
+              {/* Short label visible on mobile under the icon */}
+              <span className="lg:hidden text-[9px] font-medium leading-none text-center">
+                {shortLabel}
+              </span>
+              {/* Full label visible on desktop */}
               <span className="hidden lg:inline">{label}</span>
               {isAlertes && alertCount > 0 && (
-                <span className="absolute top-2 right-2 lg:static lg:ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[var(--danger)] text-white text-[10px] font-bold animate-pulse-glow">
+                <span className="absolute top-1 right-1 lg:static lg:ml-auto min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-[var(--danger)] text-white text-[9px] font-bold animate-pulse-glow">
                   {alertCount}
                 </span>
               )}
@@ -95,7 +100,7 @@ export default function Sidebar({ orgName, orgNda, alertCount = 0, serverTime }:
 
       {/* Live indicator — 8px dot with pulse + "Données live · Sync il y a Xs" */}
       <div className="px-3 lg:px-5 py-3 border-t border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 justify-center lg:justify-start">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-glow shrink-0" />
           <span className="hidden lg:inline text-[11px] text-[var(--text-dim)] leading-tight">
             Données live · Sync {syncLabel}

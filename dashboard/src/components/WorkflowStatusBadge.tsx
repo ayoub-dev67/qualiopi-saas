@@ -1,8 +1,8 @@
 const STATUSES: Record<string, { bg: string; text: string; icon: string; label: string }> = {
-  ok:       { bg: "#064e3b", text: "#6ee7b7", icon: "✓", label: "Actif" },
-  warning:  { bg: "#451a03", text: "#fcd34d", icon: "⚠", label: "Alerte" },
-  error:    { bg: "#450a0a", text: "#fca5a5", icon: "✕", label: "Erreur" },
-  inactive: { bg: "#1e293b", text: "#94a3b8", icon: "○", label: "Inactif" },
+  ok:       { bg: "rgba(16, 185, 129, 0.14)", text: "#047857", icon: "✓", label: "Actif" },
+  warning:  { bg: "rgba(245, 158, 11, 0.14)", text: "#b45309", icon: "⚠", label: "Alerte" },
+  error:    { bg: "rgba(239, 68, 68, 0.14)",  text: "#b91c1c", icon: "✕", label: "Erreur" },
+  inactive: { bg: "rgba(100, 116, 139, 0.18)", text: "#475569", icon: "○", label: "Inactif" },
 };
 
 export default function WorkflowStatusBadge({ status }: { status: string }) {

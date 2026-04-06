@@ -106,6 +106,33 @@ function ConventionDoc({ organisme, formation, formateur, session, inscrit }: {
         React.createElement(Text, { style: s.sectionTitle }, "Article 4 — Modalités de règlement"),
         React.createElement(Text, { style: s.p }, "Le règlement sera effectué selon les conditions convenues entre les parties.")
       ),
+      React.createElement(View, { style: s.section },
+        React.createElement(Text, { style: s.sectionTitle }, "Article 5 — Droit de rétractation"),
+        React.createElement(Text, { style: s.p },
+          "Conformément à l'article L.6353-5 du Code du travail, le bénéficiaire dispose d'un délai de rétractation de 10 jours à compter de la signature de la présente convention. Passé ce délai, celle-ci devient définitive."
+        )
+      ),
+      React.createElement(View, { style: s.section },
+        React.createElement(Text, { style: s.sectionTitle }, "Article 6 — Modalités d'évaluation"),
+        React.createElement(Text, { style: s.p },
+          "L'action de formation fait l'objet d'une évaluation des acquis en fin de parcours ainsi que d'un questionnaire de satisfaction. Un bilan pédagogique sera communiqué au bénéficiaire et, le cas échéant, à son financeur."
+        )
+      ),
+      React.createElement(View, { style: s.section },
+        React.createElement(Text, { style: s.sectionTitle }, "Article 7 — Accessibilité et handicap"),
+        React.createElement(Text, { style: s.p },
+          `L'organisme s'engage à étudier toute demande spécifique liée à une situation de handicap afin de proposer les adaptations pédagogiques nécessaires. Référent handicap : ${organisme.referent_handicap_nom || "à désigner"}${organisme.referent_handicap_email ? ` (${organisme.referent_handicap_email})` : ""}.`
+        )
+      ),
+      React.createElement(View, { style: s.section },
+        React.createElement(Text, { style: s.sectionTitle }, "Article 8 — Confidentialité"),
+        React.createElement(Text, { style: s.p },
+          "Les parties s'engagent à garder confidentielles les informations échangées dans le cadre de la présente convention et à respecter la réglementation en vigueur concernant la protection des données personnelles (RGPD)."
+        )
+      ),
+      React.createElement(Text, { style: { ...s.p, marginTop: 8, fontStyle: "italic" } },
+        "Document établi en deux exemplaires originaux."
+      ),
       React.createElement(View, { style: s.signatureBlock },
         React.createElement(View, { style: s.signatureBox },
           React.createElement(Text, { style: s.signatureLabel }, "L'Organisme de formation"),
@@ -158,6 +185,12 @@ function ConvocationDoc({ organisme, formation, formateur, session, inscrit }: {
       ),
       React.createElement(Text, { style: { ...s.p, marginTop: 20 } }, "Cordialement,"),
       React.createElement(Text, { style: { ...s.p, fontFamily: "Helvetica-Bold" } }, organisme.nom || ""),
+      React.createElement(View, { style: { ...s.section, marginTop: 20, paddingTop: 8, borderTopWidth: 0.5, borderTopColor: "#ccc" } },
+        React.createElement(Text, { style: { fontSize: 8, fontFamily: "Helvetica-Bold", color: "#1a365d", marginBottom: 3 } }, "Accessibilité PMR et handicap"),
+        React.createElement(Text, { style: { fontSize: 8, color: "#555" } },
+          `Pour toute demande spécifique liée à une situation de handicap, contactez ${organisme.referent_handicap_nom || "notre référent handicap"}${organisme.referent_handicap_email ? ` à ${organisme.referent_handicap_email}` : ""}. Nous étudierons avec vous les adaptations possibles.`
+        )
+      ),
       React.createElement(Footer, { organisme })
     )
   );
@@ -286,6 +319,7 @@ function CertificatRealisationDoc({ organisme, formation, session, inscrit }: {
       React.createElement(View, { style: s.section },
         React.createElement(Text, { style: s.sectionTitle }, "Action de formation"),
         React.createElement(Field, { label: "Intitulé :", value: formation.intitule || "" }),
+        React.createElement(Field, { label: "Type d'action :", value: "Action de formation continue (article L.6313-1 du Code du travail)" }),
         React.createElement(Field, { label: "Objectifs :", value: formation.objectifs || "" }),
         React.createElement(Field, { label: "Durée :", value: `${formation.duree_heures || "—"} heures` }),
         React.createElement(Field, { label: "Modalité :", value: session.modalite || "" }),

@@ -21,11 +21,11 @@ export default function SignupPage() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas");
+      setError("Les mots de passe ne sont pas identiques. Vérifiez votre saisie.");
       return;
     }
     if (password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères");
+      setError("Choisissez un mot de passe d'au moins 6 caractères pour sécuriser votre compte.");
       return;
     }
 

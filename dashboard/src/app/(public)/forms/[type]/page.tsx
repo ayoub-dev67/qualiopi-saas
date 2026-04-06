@@ -24,20 +24,20 @@ const FORM_FIELDS: Record<string, FieldDef[]> = {
       label: "Votre niveau actuel",
       type: "select",
       options: [
-        { value: "debutant", label: "Debutant" },
-        { value: "intermediaire", label: "Intermediaire" },
-        { value: "avance", label: "Avance" },
+        { value: "debutant", label: "Débutant" },
+        { value: "intermediaire", label: "Intermédiaire" },
+        { value: "avance", label: "Avancé" },
       ],
     },
-    { key: "experience", label: "Votre experience dans ce domaine", type: "textarea", placeholder: "Decrivez votre parcours et vos experiences..." },
+    { key: "experience", label: "Votre expérience dans ce domaine", type: "textarea", placeholder: "Décrivez votre parcours et vos expériences..." },
     { key: "attentes", label: "Vos attentes pour cette formation", type: "textarea", placeholder: "Qu'attendez-vous de cette formation ?" },
-    { key: "objectifs_personnels", label: "Vos objectifs personnels", type: "textarea", placeholder: "Quels sont vos objectifs a l'issue de la formation ?" },
-    { key: "besoins_specifiques", label: "Avez-vous des besoins specifiques ?", type: "checkbox" },
+    { key: "objectifs_personnels", label: "Vos objectifs personnels", type: "textarea", placeholder: "Quels sont vos objectifs à l'issue de la formation ?" },
+    { key: "besoins_specifiques", label: "Avez-vous des besoins spécifiques ?", type: "checkbox" },
     {
       key: "besoins_details",
-      label: "Precisez vos besoins",
+      label: "Précisez vos besoins",
       type: "textarea",
-      placeholder: "Accessibilite, contraintes horaires, besoins particuliers...",
+      placeholder: "Accessibilité, contraintes horaires, besoins particuliers...",
       showIf: (data) => !!data.besoins_specifiques,
     },
   ],
@@ -45,23 +45,23 @@ const FORM_FIELDS: Record<string, FieldDef[]> = {
     { key: "date", label: "Date", type: "text" },
     {
       key: "demi_journee",
-      label: "Demi-journee",
+      label: "Demi-journée",
       type: "select",
       options: [
         { value: "matin", label: "Matin" },
-        { value: "apres_midi", label: "Apres-midi" },
+        { value: "apres_midi", label: "Après-midi" },
       ],
     },
-    { key: "present", label: "Je confirme ma presence", type: "checkbox" },
+    { key: "present", label: "Je confirme ma présence", type: "checkbox" },
   ],
   satisfaction: [
     { key: "note_globale", label: "Satisfaction globale", type: "range", min: 1, max: 10 },
-    { key: "note_contenu", label: "Qualite du contenu", type: "range", min: 1, max: 10 },
-    { key: "note_formateur", label: "Qualite du formateur", type: "range", min: 1, max: 10 },
-    { key: "note_organisation", label: "Organisation generale", type: "range", min: 1, max: 10 },
-    { key: "points_forts", label: "Points forts de la formation", type: "textarea", placeholder: "Ce que vous avez particulierement apprecie..." },
-    { key: "axes_amelioration", label: "Axes d'amelioration", type: "textarea", placeholder: "Ce qui pourrait etre ameliore..." },
-    { key: "commentaire", label: "Commentaire libre", type: "textarea", placeholder: "Remarques supplementaires..." },
+    { key: "note_contenu", label: "Qualité du contenu", type: "range", min: 1, max: 10 },
+    { key: "note_formateur", label: "Qualité de l'intervenant", type: "range", min: 1, max: 10 },
+    { key: "note_organisation", label: "Organisation générale", type: "range", min: 1, max: 10 },
+    { key: "points_forts", label: "Points forts de la formation", type: "textarea", placeholder: "Ce que vous avez particulièrement apprécié..." },
+    { key: "axes_amelioration", label: "Axes d'amélioration", type: "textarea", placeholder: "Ce qui pourrait être amélioré..." },
+    { key: "commentaire", label: "Commentaire libre", type: "textarea", placeholder: "Remarques supplémentaires..." },
     {
       key: "recommandation",
       label: "Recommanderiez-vous cette formation ?",
@@ -73,9 +73,9 @@ const FORM_FIELDS: Record<string, FieldDef[]> = {
     },
   ],
   evaluation: [
-    { key: "competence_1", label: "Competence 1", type: "range", min: 1, max: 10 },
-    { key: "competence_2", label: "Competence 2", type: "range", min: 1, max: 10 },
-    { key: "competence_3", label: "Competence 3", type: "range", min: 1, max: 10 },
+    { key: "competence_1", label: "Compétence 1", type: "range", min: 1, max: 10 },
+    { key: "competence_2", label: "Compétence 2", type: "range", min: 1, max: 10 },
+    { key: "competence_3", label: "Compétence 3", type: "range", min: 1, max: 10 },
     {
       key: "objectifs_atteints",
       label: "Objectifs atteints",
@@ -91,7 +91,7 @@ const FORM_FIELDS: Record<string, FieldDef[]> = {
   "suivi-froid": [
     {
       key: "en_emploi",
-      label: "Etes-vous actuellement en emploi ?",
+      label: "Êtes-vous actuellement en emploi ?",
       type: "select",
       options: [
         { value: "oui", label: "Oui" },
@@ -101,7 +101,7 @@ const FORM_FIELDS: Record<string, FieldDef[]> = {
     },
     {
       key: "meme_domaine",
-      label: "Travaillez-vous dans le meme domaine que la formation ?",
+      label: "Travaillez-vous dans le même domaine que la formation ?",
       type: "select",
       options: [
         { value: "oui", label: "Oui" },
@@ -111,26 +111,26 @@ const FORM_FIELDS: Record<string, FieldDef[]> = {
     },
     {
       key: "utilisation_competences",
-      label: "Utilisez-vous les competences acquises ?",
+      label: "Utilisez-vous les compétences acquises ?",
       type: "select",
       options: [
         { value: "quotidiennement", label: "Quotidiennement" },
-        { value: "regulierement", label: "Regulierement" },
+        { value: "regulierement", label: "Régulièrement" },
         { value: "rarement", label: "Rarement" },
         { value: "jamais", label: "Jamais" },
       ],
     },
-    { key: "note_utilite", label: "Utilite de la formation", type: "range", min: 1, max: 10 },
+    { key: "note_utilite", label: "Utilité de la formation", type: "range", min: 1, max: 10 },
     { key: "commentaire", label: "Commentaire", type: "textarea", placeholder: "Remarques sur l'impact de la formation..." },
   ],
 };
 
 const TYPE_LABELS: Record<string, string> = {
   positionnement: "Questionnaire de positionnement",
-  emargement: "Emargement",
-  satisfaction: "Enquete de satisfaction",
-  evaluation: "Evaluation des acquis",
-  "suivi-froid": "Suivi a froid",
+  emargement: "Émargement",
+  satisfaction: "Enquête de satisfaction",
+  evaluation: "Évaluation des acquis",
+  "suivi-froid": "Suivi à froid",
 };
 
 /* ---------- Sub-components ---------- */
@@ -282,7 +282,7 @@ function FormPageInner() {
       .then((r) => r.json())
       .then((data) => {
         if (data.error) {
-          setError(data.error === "Already completed" ? "Ce questionnaire a deja ete complete." : "Lien invalide ou expire.");
+          setError(data.error === "Already completed" ? "Ce questionnaire a déjà été complété." : "Lien invalide ou expiré.");
         } else {
           setInfo(data);
         }
@@ -352,8 +352,8 @@ function FormPageInner() {
         <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 size={40} className="text-emerald-500" />
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Merci pour votre reponse !</h2>
-        <p className="text-sm text-gray-500">Votre {TYPE_LABELS[type]?.toLowerCase() || "formulaire"} a bien ete enregistre.</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Merci pour votre réponse !</h2>
+        <p className="text-sm text-gray-500">Votre {TYPE_LABELS[type]?.toLowerCase() || "formulaire"} a bien été enregistré.</p>
       </div>
     );
   }
@@ -422,14 +422,14 @@ function FormPageInner() {
             style={{ background: "linear-gradient(135deg, #6366f1, #7c3aed)" }}
           >
             {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-            {submitting ? "Envoi en cours..." : "Envoyer ma reponse"}
+            {submitting ? "Envoi en cours..." : "Envoyer ma réponse"}
           </button>
         </form>
       </div>
 
       {/* Footer */}
       <p className="text-center text-xs text-gray-400 mt-6">
-        Propulse par Qualiopi SaaS
+        Propulsé par Qualiopi SaaS
       </p>
     </div>
   );

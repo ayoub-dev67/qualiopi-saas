@@ -373,19 +373,19 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Apprenants */}
+      {/* Bénéficiaires */}
       <div className="glass-card p-6 stagger-5">
         <div className="flex items-center gap-2 mb-5">
           <Users size={16} className="text-[var(--accent)]" />
           <h3 className="text-sm font-semibold text-[var(--text-secondary)]">
-            Apprenants inscrits
+            Bénéficiaires inscrits
             <span className="ml-2 text-xs text-[var(--text-dim)] font-normal">({inscriptions.length})</span>
           </h3>
         </div>
         {inscriptions.length === 0 ? (
           <div className="flex flex-col items-center py-8">
             <Users size={40} className="text-[var(--text-dim)] mb-3 opacity-30" />
-            <p className="text-sm text-[var(--text-secondary)]">Aucun apprenant inscrit à cette session</p>
+            <p className="text-sm text-[var(--text-secondary)]">Aucun bénéficiaire inscrit à cette session</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

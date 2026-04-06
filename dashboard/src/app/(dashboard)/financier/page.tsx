@@ -5,13 +5,13 @@ import DataTable from "@/components/DataTable";
 import FinancierChart from "@/components/charts/FinancierChart";
 
 const PAIEMENT_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  paye:           { bg: "#064e3b", text: "#6ee7b7", label: "PAYÉ" },
-  encaisse:       { bg: "#064e3b", text: "#6ee7b7", label: "ENCAISSÉ" },
-  en_attente:     { bg: "#312e81", text: "#a5b4fc", label: "EN ATTENTE" },
-  emise:          { bg: "#312e81", text: "#a5b4fc", label: "ÉMISE" },
-  facturee:       { bg: "#451a03", text: "#fcd34d", label: "FACTURÉE" },
-  en_retard:      { bg: "#450a0a", text: "#fca5a5", label: "EN RETARD" },
-  annulee:        { bg: "#1e293b", text: "#94a3b8", label: "ANNULÉE" },
+  paye:           { bg: "rgba(16, 185, 129, 0.14)", text: "#047857", label: "PAYÉ" },
+  encaisse:       { bg: "rgba(16, 185, 129, 0.14)", text: "#047857", label: "ENCAISSÉ" },
+  en_attente:     { bg: "rgba(99, 102, 241, 0.14)", text: "#4338ca", label: "EN ATTENTE" },
+  emise:          { bg: "rgba(99, 102, 241, 0.14)", text: "#4338ca", label: "ÉMISE" },
+  facturee:       { bg: "rgba(245, 158, 11, 0.14)", text: "#b45309", label: "FACTURÉE" },
+  en_retard:      { bg: "rgba(239, 68, 68, 0.14)",  text: "#b91c1c", label: "EN RETARD" },
+  annulee:        { bg: "rgba(100, 116, 139, 0.18)", text: "#475569", label: "ANNULÉE" },
 };
 
 export default async function FinancierPage() {

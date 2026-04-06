@@ -15,9 +15,14 @@ export const metadata: Metadata = {
   },
 };
 
+const themeInitScript = `try{var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" data-theme="light" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className={`${dmSans.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         {children}
       </body>

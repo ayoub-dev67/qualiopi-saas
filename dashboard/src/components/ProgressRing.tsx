@@ -31,7 +31,7 @@ export default function ProgressRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#1e293b"
+          stroke="var(--border-subtle)"
           strokeWidth={strokeWidth}
         />
         <circle
@@ -47,7 +47,7 @@ export default function ProgressRing({
           style={{ transition: "stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
         />
       </svg>
-      <span className="absolute text-sm font-bold text-[#f1f5f9]">
+      <span className="absolute text-sm font-bold text-[var(--text-primary)]">
         {Math.round(clamped)}%
       </span>
     </div>

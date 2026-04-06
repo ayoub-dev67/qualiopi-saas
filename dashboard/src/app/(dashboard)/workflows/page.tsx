@@ -10,14 +10,24 @@ interface WorkflowDef {
 }
 
 const WORKFLOWS: WorkflowDef[] = [
-  { id: "WF0", name: "Setup Session", description: "Création dossier Drive, génération Convention PDF (Gotenberg), envoi Convocations email avec pièces jointes" },
-  { id: "WF1", name: "Positionnement", description: "Envoi automatique des liens Google Forms pour le questionnaire de positionnement pré-formation à chaque apprenant inscrit" },
+  { id: "WF0", name: "Setup Session", description: "Création dossier Drive, génération Convention PDF, envoi Convocations email avec pièces jointes" },
+  { id: "WF1", name: "Positionnement", description: "Envoi automatique du questionnaire de positionnement pré-formation à chaque bénéficiaire inscrit" },
   { id: "WF2", name: "Émargement", description: "Génération et envoi des feuilles de présence quotidiennes, suivi de l'émargement digital par session" },
-  { id: "WF3", name: "Satisfaction & Évaluation", description: "Envoi des questionnaires Google Forms de satisfaction et d'évaluation des acquis post-session, collecte et agrégation des résultats" },
+  { id: "WF3", name: "Satisfaction & Évaluation", description: "Envoi des questionnaires de satisfaction et d'évaluation des acquis post-session, collecte et agrégation des résultats" },
   { id: "WF4", name: "Amélioration Continue", description: "Traitement des réclamations, calcul hebdomadaire des KPIs qualité, génération du rapport d'amélioration continue" },
-  { id: "WF5", name: "Relances", description: "Relances automatiques multi-niveaux par email pour les questionnaires non complétés, conventions non signées, documents manquants" },
+  { id: "WF5", name: "Relances", description: "Relances automatiques multi-niveaux par email pour les questionnaires non complétés" },
   { id: "WF6", name: "Suivi à Froid", description: "Génération des attestations et certificats de réalisation, envoi du questionnaire de suivi à froid 6 mois post-formation" },
 ];
+
+const WF_TOOLTIPS: Record<string, string> = {
+  WF0: "W0 — Setup session : convention + convocations",
+  WF1: "W1 — Envoi des questionnaires de positionnement",
+  WF2: "W2 — Émargement des bénéficiaires",
+  WF3: "W3 — Évaluation et satisfaction post-formation",
+  WF4: "W4 — Amélioration continue + KPIs",
+  WF5: "W5 — Relances des questionnaires non complétés",
+  WF6: "W6 — Suivi à froid 6 mois",
+};
 
 function relativeDate(dateStr: string): string {
   if (!dateStr || dateStr === "—") return "—";
@@ -161,7 +171,10 @@ export default async function WorkflowsPage() {
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div className="flex items-start gap-5">
                 {/* ID */}
-                <div className="text-2xl font-bold font-mono text-[var(--text-primary)] min-w-[60px]">
+                <div
+                  className="text-2xl font-bold font-mono text-[var(--text-primary)] min-w-[60px] cursor-help"
+                  title={WF_TOOLTIPS[wf.id] ?? wf.name}
+                >
                   {wf.id}
                 </div>
                 <div>
